@@ -61,8 +61,9 @@ curl http://127.0.0.1:8000/api/quotes
 
 This repo includes `api/index.py`, `requirements.txt`, and `vercel.json` for Vercel.
 Vercel runs the FastAPI app as serverless functions, so `vercel.json` uses `/tmp` for
-runtime SQLite/watchlist files and disables background polling tasks. The browser polls
-`/api/quotes` directly in production instead of opening the local WebSocket.
+runtime SQLite/watchlist files, seeds SQLite from `config/market_board_seed.sqlite3`,
+and disables background polling tasks. The browser polls `/api/quotes` directly in
+production instead of opening the local WebSocket.
 
 ```bash
 vercel --prod

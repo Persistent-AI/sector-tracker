@@ -45,6 +45,7 @@ class AssetRequest(BaseModel):
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     settings = Settings()
     ensure_runtime_watchlist(settings)
+    ensure_runtime_database(settings)
     groups = load_watchlists(settings.watchlist_path)
     db.init_db(settings.database_path)
 
@@ -97,6 +98,17 @@ def ensure_runtime_watchlist(settings: Settings) -> None:
         return
     settings.watchlist_path.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(settings.watchlist_seed_path, settings.watchlist_path)
+
+
+def ensure_runtime_database(settings: Settings) -> None:
+    if settings.database_path.exists():
+        return
+    if not settings.database_seed_path.exists():
+        return
+    if settings.database_path.resolve() == settings.database_seed_path.resolve():
+        return
+    settings.database_path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(settings.database_seed_path, settings.database_path)
 
 
 @app.get("/")

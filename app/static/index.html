@@ -10,7 +10,7 @@
       href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="/static/styles.css" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260701-1" />
   </head>
   <body>
     <header class="app-header">
@@ -28,7 +28,11 @@
       </nav>
 
       <div class="topbar-actions">
-        <div class="live-badge"><span id="connection-state" class="state-dot"></span>Live Feed</div>
+        <div class="live-badge">
+          <span id="connection-state" class="state-dot"></span>
+          <span>Live Feed</span>
+          <span id="live-freshness" class="live-freshness">Updated --</span>
+        </div>
         <button id="refresh-button" class="toolbar-button" type="button">
           <i data-lucide="refresh-cw" aria-hidden="true"></i><span>Refresh</span>
         </button>
@@ -38,7 +42,7 @@
       </div>
     </header>
 
-    <div id="status-strip" class="status-strip">
+    <div id="status-strip" class="status-strip connecting">
       <span class="status-pulse"></span>
       <span class="status-label">System</span>
       <span id="status-copy">Connecting to market data</span>
@@ -47,12 +51,68 @@
     <main class="workspace">
       <section id="daily-view" class="view-panel" aria-label="Daily board">
         <div id="daily-board" class="daily-board">
-          <div class="empty-state">Building market read</div>
+          <section class="analytics-panel loading-panel" aria-label="Loading market read">
+            <header class="panel-heading">
+              <span class="skeleton-line title"></span>
+              <span class="skeleton-line short"></span>
+            </header>
+            <div class="regime-grid loading-regime">
+              <div class="loading-cell"><span></span><strong></strong><em></em></div>
+              <div class="loading-cell"><span></span><strong></strong><em></em></div>
+              <div class="loading-cell"><span></span><strong></strong><em></em></div>
+              <div class="loading-cell"><span></span><strong></strong><em></em></div>
+              <div class="loading-cell"><span></span><strong></strong><em></em></div>
+              <div class="loading-cell"><span></span><strong></strong><em></em></div>
+            </div>
+          </section>
+          <div class="analytics-grid">
+            <section class="analytics-panel loading-panel">
+              <header class="panel-heading">
+                <span class="skeleton-line title"></span>
+                <span class="skeleton-line short"></span>
+              </header>
+              <div class="loading-blocks six">
+                <span></span><span></span><span></span><span></span><span></span><span></span>
+              </div>
+            </section>
+            <section class="analytics-panel loading-panel">
+              <header class="panel-heading">
+                <span class="skeleton-line title"></span>
+                <span class="skeleton-line short"></span>
+              </header>
+              <div class="loading-list">
+                <span></span><span></span><span></span><span></span><span></span><span></span>
+              </div>
+            </section>
+          </div>
+          <div class="analytics-grid equal">
+            <section class="analytics-panel loading-panel">
+              <header class="panel-heading"><span class="skeleton-line title"></span></header>
+              <div class="loading-table"><span></span><span></span><span></span><span></span><span></span></div>
+            </section>
+            <section class="analytics-panel loading-panel">
+              <header class="panel-heading"><span class="skeleton-line title"></span></header>
+              <div class="loading-table"><span></span><span></span><span></span><span></span><span></span></div>
+            </section>
+          </div>
         </div>
       </section>
 
       <section id="markets-view" class="view-panel" aria-label="Markets" hidden>
-        <div id="board" class="board" aria-live="polite"></div>
+        <div id="board" class="board board-loading" aria-live="polite">
+          <section class="group-panel loading-panel">
+            <div class="group-title"><span></span><span></span><span></span><span></span><span></span></div>
+            <div class="loading-rows"><span></span><span></span><span></span><span></span><span></span></div>
+          </section>
+          <section class="group-panel loading-panel">
+            <div class="group-title"><span></span><span></span><span></span><span></span><span></span></div>
+            <div class="loading-rows"><span></span><span></span><span></span><span></span></div>
+          </section>
+          <section class="group-panel loading-panel">
+            <div class="group-title"><span></span><span></span><span></span><span></span><span></span></div>
+            <div class="loading-rows"><span></span><span></span><span></span></div>
+          </section>
+        </div>
       </section>
     </main>
 
@@ -151,6 +211,6 @@
 
     <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
     <script src="https://unpkg.com/lightweight-charts@4.2.3/dist/lightweight-charts.standalone.production.js"></script>
-    <script src="/static/app.js?v=20260630-3" defer></script>
+    <script src="/static/app.js?v=20260701-1" defer></script>
   </body>
 </html>

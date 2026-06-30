@@ -78,7 +78,7 @@ def _equity_metrics(info: dict[str, Any]) -> list[dict[str, object]]:
         _metric("Profit Margin", _format_percent(_number(info, "profitMargins"))),
         _metric("Revenue Growth", _format_percent(_number(info, "revenueGrowth"))),
         _metric("Beta", _format_ratio(_number(info, "beta"))),
-        _metric("Avg Volume", _format_compact(_number(info, "averageVolume"))),
+        _metric("Avg Volume", _format_plain_compact(_number(info, "averageVolume"))),
         _metric("52W High", _format_price(_number(info, "fiftyTwoWeekHigh"))),
         _metric("52W Low", _format_price(_number(info, "fiftyTwoWeekLow"))),
     ]
@@ -92,7 +92,7 @@ def _etf_metrics(info: dict[str, Any]) -> list[dict[str, object]]:
         _metric("Yield", _format_percent(_number(info, "yield"))),
         _metric("Expense", _format_percent(_number(info, "annualReportExpenseRatio"))),
         _metric("Beta 3Y", _format_ratio(_number(info, "beta3Year"))),
-        _metric("Avg Volume", _format_compact(_number(info, "averageVolume"))),
+        _metric("Avg Volume", _format_plain_compact(_number(info, "averageVolume"))),
         _metric("52W High", _format_price(_number(info, "fiftyTwoWeekHigh"))),
         _metric("52W Low", _format_price(_number(info, "fiftyTwoWeekLow"))),
     ]
@@ -153,6 +153,22 @@ def _format_compact(value: float | None) -> str | None:
         return f"{sign}${abs_value / 1_000_000_000:.2f}B"
     if abs_value >= 1_000_000:
         return f"{sign}${abs_value / 1_000_000:.1f}M"
+    if abs_value >= 1_000:
+        return f"{sign}{abs_value / 1_000:.1f}K"
+    return f"{sign}{abs_value:.0f}"
+
+
+def _format_plain_compact(value: float | None) -> str | None:
+    if value is None:
+        return None
+    abs_value = abs(value)
+    sign = "-" if value < 0 else ""
+    if abs_value >= 1_000_000_000_000:
+        return f"{sign}{abs_value / 1_000_000_000_000:.2f}T"
+    if abs_value >= 1_000_000_000:
+        return f"{sign}{abs_value / 1_000_000_000:.2f}B"
+    if abs_value >= 1_000_000:
+        return f"{sign}{abs_value / 1_000_000:.1f}M"
     if abs_value >= 1_000:
         return f"{sign}{abs_value / 1_000:.1f}K"
     return f"{sign}{abs_value:.0f}"

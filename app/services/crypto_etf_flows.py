@@ -333,7 +333,12 @@ def _rank_etf_flows(
 def _is_populated_flow_row(row: dict[str, object]) -> bool:
     etf_flows = row.get("etf_flows")
     if isinstance(etf_flows, list) and etf_flows:
-        return True
+        for flow in etf_flows:
+            if not isinstance(flow, dict):
+                continue
+            value = flow.get("flow_usd")
+            if isinstance(value, int | float) and float(value) != 0.0:
+                return True
     flow = row.get("flow_usd")
     return isinstance(flow, int | float) and float(flow) != 0.0
 

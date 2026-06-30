@@ -2,7 +2,9 @@ const board = document.querySelector("#board");
 const dailyBoard = document.querySelector("#daily-board");
 const boardMeta = document.querySelector("#board-meta");
 const statusCopy = document.querySelector("#status-copy");
+const statusStrip = document.querySelector("#status-strip");
 const connectionState = document.querySelector("#connection-state");
+const liveFreshness = document.querySelector("#live-freshness");
 const refreshButton = document.querySelector("#refresh-button");
 const viewButtons = Array.from(document.querySelectorAll(".view-tabs button"));
 const dailyView = document.querySelector("#daily-view");
@@ -50,6 +52,7 @@ init();
 
 function init() {
   window.lucide?.createIcons();
+  setConnection("connecting");
   fetchQuotes();
   fetchCryptoEtfFlows();
   if (shouldUseWebSocket()) openSocket();
@@ -173,6 +176,7 @@ function updateHeader(overview) {
   const date = Number.isNaN(asOf.getTime()) ? "--" : asOf.toISOString().slice(0, 10);
   const time = Number.isNaN(asOf.getTime()) ? "--" : formatClock(asOf);
   boardMeta.textContent = `${date} · ${universe.total || 0} names · universe v2`;
+  liveFreshness.textContent = time === "--" ? "Updated --" : `Updated ${time}`;
   statusCopy.textContent = [
     "LIVE QUOTES",
     `${universe.quoted || 0}/${universe.total || 0} QUOTED`,
@@ -340,10 +344,11 @@ function themeTable(themes) {
 }
 
 function themeRow(theme) {
+  const score = scorePercent(theme.score);
   return `<tr>
     <td>${formatInteger(theme.rank)}</td>
     <td>${escapeHtml(displayGroupName(theme.name))}<span class="member-count">${formatInteger(theme.count)}</span></td>
-    <td><span class="score-value">${formatInteger(theme.score)}</span></td>
+    <td><span class="score-bar" style="--score: ${score}%"><span class="score-value">${formatInteger(theme.score)}</span></span></td>
     <td class="${changeClass(theme.change_1d)}">${formatSignedPct(theme.change_1d)}</td>
     <td class="${changeClass(theme.change_5d)}">${formatSignedPct(theme.change_5d)}</td>
     <td><span class="status-tag status-${String(theme.status || "neutral").toLowerCase()}">${escapeHtml(theme.status || "NEUTRAL")}</span></td>
@@ -392,16 +397,17 @@ function cryptoEtfFlowPanel(flows) {
 }
 
 function cryptoEtfFlowCard(asset) {
+  const hasLatestPrint = hasLatestFlowPrint(asset);
   return `<div class="crypto-flow-card">
     <div class="crypto-flow-summary">
       <div>
         <span class="metric-label">${escapeHtml(asset.name || `${asset.asset} ETFs`)}</span>
-        <strong class="metric-value ${changeClass(asset.latest_flow_usd)}">${formatUsdFlow(asset.latest_flow_usd)}</strong>
+        <strong class="metric-value ${changeClass(hasLatestPrint ? asset.latest_flow_usd : null)}">${hasLatestPrint ? formatUsdFlow(asset.latest_flow_usd) : "No print"}</strong>
       </div>
       <div class="flow-side-metrics">
         ${metricLine("5D", formatUsdFlow(asset.five_day_flow_usd), changeClass(asset.five_day_flow_usd))}
         ${metricLine("10D", formatUsdFlow(asset.ten_day_flow_usd), changeClass(asset.ten_day_flow_usd))}
-        ${metricLine("Date", formatFlowDate(asset.latest_date), "")}
+        ${metricLine("Date", hasLatestPrint ? formatFlowDate(asset.latest_date) : "--", "")}
       </div>
     </div>
     <div class="crypto-flow-lists">
@@ -425,6 +431,12 @@ function flowItem(item, tone) {
   </div>`;
 }
 
+function hasLatestFlowPrint(asset) {
+  if (typeof asset.latest_flow_usd !== "number") return false;
+  if (asset.latest_flow_usd !== 0) return true;
+  return Boolean((asset.leaders || []).length || (asset.laggards || []).length);
+}
+
 function cryptoEtfFlowError(error) {
   if (error === "farside_fetch_failed") return "Farside flows unavailable";
   return "ETF flows unavailable";
@@ -432,6 +444,7 @@ function cryptoEtfFlowError(error) {
 
 function renderBoard(payload) {
   const groups = payload.groups || [];
+  board.classList.remove("board-loading");
   if (!groups.length) {
     board.innerHTML = '<div class="empty-state">No groups configured</div>';
     return;
@@ -775,13 +788,19 @@ function renderAssetProfile(profile) {
     profile.exchange,
   ].filter(Boolean).join(" / ");
   const description = profile.description || "Company description is not available from the current data source.";
+  const hasLongDescription = description.length > 340;
 
   profileElement.innerHTML = `
     <div class="profile-summary">
       <div class="profile-kicker">Profile</div>
       <h3>${escapeHtml(name)} <span>${escapeHtml(profile.symbol || "")}</span></h3>
       <p class="profile-meta">${escapeHtml(meta || profile.asset_type || "Asset")}</p>
-      <p class="profile-description">${escapeHtml(description)}</p>
+      <p id="profile-description-text" class="profile-description">${escapeHtml(description)}</p>
+      ${
+        hasLongDescription
+          ? '<button class="profile-description-toggle" type="button" aria-expanded="false" aria-controls="profile-description-text">More</button>'
+          : ""
+      }
     </div>
     <div class="profile-metrics">
       ${
@@ -791,6 +810,7 @@ function renderAssetProfile(profile) {
       }
     </div>
   `;
+  bindProfileDescriptionToggle();
 }
 
 function profileMetric(metric) {
@@ -817,7 +837,21 @@ function isCryptoAsset(assetType) {
   return String(assetType || "").startsWith("crypto");
 }
 
+function bindProfileDescriptionToggle() {
+  const toggle = profileElement.querySelector(".profile-description-toggle");
+  const description = profileElement.querySelector(".profile-description");
+  if (!toggle || !description) return;
+  toggle.addEventListener("click", () => {
+    const expanded = description.classList.toggle("expanded");
+    toggle.setAttribute("aria-expanded", String(expanded));
+    toggle.textContent = expanded ? "Less" : "More";
+  });
+}
+
 function setConnection(state) {
+  statusStrip.classList.toggle("live", state === "live");
+  statusStrip.classList.toggle("error", state === "error");
+  statusStrip.classList.toggle("connecting", state === "connecting");
   connectionState.classList.toggle("live", state === "live");
   connectionState.classList.toggle("error", state === "error");
 }
@@ -876,6 +910,11 @@ function formatFlowDate(value) {
 
 function formatInteger(value) {
   return typeof value === "number" ? Math.round(value).toString() : "--";
+}
+
+function scorePercent(value) {
+  if (typeof value !== "number") return 0;
+  return Math.max(0, Math.min(100, Math.round(value)));
 }
 
 function formatClock(date) {

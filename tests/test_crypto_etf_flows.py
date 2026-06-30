@@ -196,3 +196,25 @@ def test_summarize_ignores_blank_current_day_placeholder() -> None:
     assert payload["five_day_flow_usd"] == -1_900_000
     assert payload["leaders"][0]["ticker"] == "BSOL"  # type: ignore[index]
     assert payload["rows"][-1]["date"] == "2026-06-26"  # type: ignore[index]
+
+
+def test_summarize_ignores_all_zero_current_day_placeholder() -> None:
+    markdown = """
+| Date | IBIT | FBTC | GBTC | Total |
+| --- | --- | --- | --- | --- |
+| 26 Jun 2026 | (444.5) | - | 0.0 | (444.5) |
+| 29 Jun 2026 | 0.0 | 0.0 | 0.0 | 0.0 |
+"""
+
+    rows = parse_pipe_table(markdown)
+    payload = summarize_flow_asset("BTC", "BTC Spot ETFs", rows)
+
+    assert rows[-1]["date"] == "2026-06-29"
+    assert rows[-1]["etf_flows"] == [
+        {"ticker": "IBIT", "flow_usd": 0},
+        {"ticker": "FBTC", "flow_usd": 0},
+        {"ticker": "GBTC", "flow_usd": 0},
+    ]
+    assert payload["latest_date"] == "2026-06-26"
+    assert payload["latest_flow_usd"] == -444_500_000
+    assert payload["laggards"][0]["ticker"] == "IBIT"  # type: ignore[index]

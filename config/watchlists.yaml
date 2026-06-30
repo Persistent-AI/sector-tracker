@@ -112,24 +112,6 @@ groups:
     type: equity
     source: yahoo
     exchange: NASDAQ
-- name: AI_INFRA
-  assets:
-  - symbol: IREN
-    type: equity
-    source: yahoo
-    exchange: NASDAQ
-  - symbol: CIFR
-    type: equity
-    source: yahoo
-    exchange: NASDAQ
-  - symbol: WULF
-    type: equity
-    source: yahoo
-    exchange: NASDAQ
-  - symbol: NBIS
-    type: equity
-    source: yahoo
-    exchange: NASDAQ
 - name: NEOCLOUD
   assets:
   - symbol: CRWV
@@ -157,11 +139,6 @@ groups:
     source: yahoo
     exchange: NASDAQ
     name: TeraWulf
-  - symbol: CLSK
-    type: equity
-    source: yahoo
-    exchange: NASDAQ
-    name: CleanSpark
 - name: METALS
   assets:
   - symbol: XME

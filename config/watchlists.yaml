@@ -226,6 +226,95 @@ groups:
     source: yahoo
     exchange: NYSE
     name: Quanta Services
+- name: DEFENSE
+  assets:
+  - symbol: ITA
+    type: etf
+    source: yahoo
+    exchange: CBOE
+    name: Aerospace & Defense ETF
+  - symbol: XAR
+    type: etf
+    source: yahoo
+    exchange: NYSEARCA
+    name: Aerospace & Defense ETF
+  - symbol: LMT
+    type: equity
+    source: yahoo
+    exchange: NYSE
+    name: Lockheed Martin
+  - symbol: RTX
+    type: equity
+    source: yahoo
+    exchange: NYSE
+    name: RTX
+  - symbol: NOC
+    type: equity
+    source: yahoo
+    exchange: NYSE
+    name: Northrop Grumman
+  - symbol: GD
+    type: equity
+    source: yahoo
+    exchange: NYSE
+    name: General Dynamics
+  - symbol: AVAV
+    type: equity
+    source: yahoo
+    exchange: NASDAQ
+    name: AeroVironment
+  - symbol: KTOS
+    type: equity
+    source: yahoo
+    exchange: NASDAQ
+    name: Kratos Defense
+- name: ROBOTICS
+  assets:
+  - symbol: BOT
+    type: equity
+    source: yahoo
+    exchange: NASDAQ
+    name: RoboStrategy
+  - symbol: BOTZ
+    type: etf
+    source: yahoo
+    exchange: NASDAQ
+    name: Robotics & AI ETF
+  - symbol: ROBO
+    type: etf
+    source: yahoo
+    exchange: NYSEARCA
+    name: Robotics & Automation ETF
+  - symbol: ISRG
+    type: equity
+    source: yahoo
+    exchange: NASDAQ
+    name: Intuitive Surgical
+  - symbol: SYM
+    type: equity
+    source: yahoo
+    exchange: NASDAQ
+    name: Symbotic
+  - symbol: TER
+    type: equity
+    source: yahoo
+    exchange: NASDAQ
+    name: Teradyne
+  - symbol: SERV
+    type: equity
+    source: yahoo
+    exchange: NASDAQ
+    name: Serve Robotics
+  - symbol: RR
+    type: equity
+    source: yahoo
+    exchange: NASDAQ
+    name: Richtech Robotics
+  - symbol: ARBE
+    type: equity
+    source: yahoo
+    exchange: NASDAQ
+    name: Arbe Robotics
 - name: ETF_MACRO
   assets:
   - symbol: SPY

@@ -39,6 +39,8 @@ let watchlistConfig = null;
 let activeSymbol = null;
 let activeRange = "ytd";
 let activeInterval = "1d";
+let activeDialog = null;
+let lastFocusedElement = null;
 let chart = null;
 
 const sourceLabels = {
@@ -64,6 +66,7 @@ function init() {
   });
   viewButtons.forEach((button) => {
     button.addEventListener("click", () => selectView(button.dataset.view || "daily"));
+    button.addEventListener("keydown", handleViewTabKeydown);
   });
   modalClose.addEventListener("click", closeModal);
   modal.addEventListener("click", (event) => {
@@ -75,6 +78,10 @@ function init() {
     if (event.target === editorModal) closeEditor();
   });
   document.addEventListener("keydown", (event) => {
+    if (event.key === "Tab" && activeDialog) {
+      trapDialogFocus(event, activeDialog);
+      return;
+    }
     if (event.key === "Escape") {
       closeModal();
       closeEditor();
@@ -97,7 +104,28 @@ function selectView(view) {
   const showDaily = view === "daily";
   dailyView.hidden = !showDaily;
   marketsView.hidden = showDaily;
-  viewButtons.forEach((button) => button.classList.toggle("active", button.dataset.view === view));
+  viewButtons.forEach((button) => {
+    const selected = button.dataset.view === view;
+    button.classList.toggle("active", selected);
+    button.setAttribute("aria-selected", String(selected));
+    button.tabIndex = selected ? 0 : -1;
+  });
+}
+
+function handleViewTabKeydown(event) {
+  const currentIndex = viewButtons.indexOf(event.currentTarget);
+  if (currentIndex < 0) return;
+  let nextIndex = currentIndex;
+  if (event.key === "ArrowRight") nextIndex = (currentIndex + 1) % viewButtons.length;
+  else if (event.key === "ArrowLeft") nextIndex = (currentIndex - 1 + viewButtons.length) % viewButtons.length;
+  else if (event.key === "Home") nextIndex = 0;
+  else if (event.key === "End") nextIndex = viewButtons.length - 1;
+  else return;
+
+  event.preventDefault();
+  const nextButton = viewButtons[nextIndex];
+  nextButton.focus();
+  selectView(nextButton.dataset.view || "daily");
 }
 
 async function fetchQuotes() {
@@ -469,14 +497,12 @@ function renderBoard(payload) {
 }
 
 async function openEditor() {
-  editorModal.classList.add("open");
-  editorModal.setAttribute("aria-hidden", "false");
+  openDialog(editorModal, groupNameInput);
   await fetchWatchlistConfig();
 }
 
 function closeEditor() {
-  editorModal.classList.remove("open");
-  editorModal.setAttribute("aria-hidden", "true");
+  closeDialog(editorModal);
 }
 
 async function fetchWatchlistConfig() {
@@ -625,7 +651,7 @@ function renderRow(asset) {
 
   row.appendChild(symbolCell(asset));
   row.appendChild(textCell(formatPrice(quote.last, quote.error)));
-  row.appendChild(changeCell(formatSigned(quote.change_abs), quote.change_pct));
+  row.appendChild(absChangeCell(formatSigned(quote.change_abs)));
   row.appendChild(changeCell(formatSignedPct(quote.change_pct), quote.change_pct));
   row.appendChild(sourceCell(quote));
   return row;
@@ -654,6 +680,12 @@ function changeCell(text, changePct) {
   return cell;
 }
 
+function absChangeCell(text) {
+  const cell = textCell(text);
+  cell.classList.add("change-abs-cell");
+  return cell;
+}
+
 function sourceCell(quote) {
   const cell = textCell(quote.is_stale ? "STALE" : sourceLabels[quote.provider] || "--");
   cell.className = "source-cell";
@@ -667,8 +699,7 @@ function openChart(symbol, name, provider, assetType) {
   intervalButtons.forEach((item) => item.classList.toggle("active", item.dataset.range === "ytd"));
   chartTitle.textContent = symbol;
   chartSubtitle.textContent = [name, sourceLabels[provider] || provider].filter(Boolean).join(" / ");
-  modal.classList.add("open");
-  modal.setAttribute("aria-hidden", "false");
+  openDialog(modal, modalClose);
   loadChart(symbol, activeRange, activeInterval);
   if (isCryptoAsset(assetType)) {
     hideProfilePanel();
@@ -680,8 +711,7 @@ function openChart(symbol, name, provider, assetType) {
 }
 
 function closeModal() {
-  modal.classList.remove("open");
-  modal.setAttribute("aria-hidden", "true");
+  if (!closeDialog(modal)) return;
   activeSymbol = null;
   if (chart) {
     chart.remove();
@@ -845,6 +875,79 @@ function bindProfileDescriptionToggle() {
     const expanded = description.classList.toggle("expanded");
     toggle.setAttribute("aria-expanded", String(expanded));
     toggle.textContent = expanded ? "Less" : "More";
+  });
+}
+
+function openDialog(dialog, focusTarget) {
+  lastFocusedElement = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  dialog.classList.add("open");
+  dialog.setAttribute("aria-hidden", "false");
+  activeDialog = dialog;
+  window.requestAnimationFrame(() => {
+    const target = focusTarget || firstFocusableElement(dialog);
+    target?.focus();
+  });
+}
+
+function closeDialog(dialog) {
+  if (!dialog.classList.contains("open")) return false;
+  dialog.classList.remove("open");
+  dialog.setAttribute("aria-hidden", "true");
+  if (activeDialog === dialog) activeDialog = null;
+  const returnTarget = dialogReturnTarget(lastFocusedElement);
+  if (returnTarget) {
+    returnTarget.focus();
+  }
+  lastFocusedElement = null;
+  return true;
+}
+
+function dialogReturnTarget(element) {
+  if (!element) return null;
+  if (document.contains(element)) return element;
+  const symbol = element.dataset?.symbol;
+  if (!symbol) return null;
+  return (
+    Array.from(document.querySelectorAll(".asset-row")).find((row) => row.dataset.symbol === symbol) || null
+  );
+}
+
+function trapDialogFocus(event, dialog) {
+  const focusable = focusableElements(dialog);
+  if (!focusable.length) {
+    event.preventDefault();
+    return;
+  }
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (!dialog.contains(document.activeElement)) {
+    event.preventDefault();
+    first.focus();
+  } else if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first.focus();
+  }
+}
+
+function firstFocusableElement(container) {
+  return focusableElements(container)[0] || null;
+}
+
+function focusableElements(container) {
+  const selector = [
+    "button:not([disabled])",
+    "input:not([disabled])",
+    "select:not([disabled])",
+    "textarea:not([disabled])",
+    "a[href]",
+    '[tabindex]:not([tabindex="-1"])',
+  ].join(",");
+  return Array.from(container.querySelectorAll(selector)).filter((element) => {
+    const style = window.getComputedStyle(element);
+    return style.display !== "none" && style.visibility !== "hidden";
   });
 }
 

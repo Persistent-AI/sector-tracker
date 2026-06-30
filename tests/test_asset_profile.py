@@ -6,6 +6,8 @@ def test_equity_average_volume_is_not_currency_prefixed() -> None:
         {
             "marketCap": 1_250_000_000,
             "averageVolume": 52_800_000,
+            "fiftyTwoWeekHigh": 1255.19,
+            "fiftyTwoWeekLow": 103.38,
         }
     )
 
@@ -13,6 +15,9 @@ def test_equity_average_volume_is_not_currency_prefixed() -> None:
 
     assert by_label["Market Cap"] == "$1.25B"
     assert by_label["Avg Volume"] == "52.8M"
+    assert by_label["52W Range"] == "$103.38 - $1,255"
+    assert "52W High" not in by_label
+    assert "52W Low" not in by_label
 
 
 def test_etf_average_volume_is_not_currency_prefixed() -> None:

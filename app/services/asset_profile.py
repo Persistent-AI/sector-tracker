@@ -79,8 +79,13 @@ def _equity_metrics(info: dict[str, Any]) -> list[dict[str, object]]:
         _metric("Revenue Growth", _format_percent(_number(info, "revenueGrowth"))),
         _metric("Beta", _format_ratio(_number(info, "beta"))),
         _metric("Avg Volume", _format_plain_compact(_number(info, "averageVolume"))),
-        _metric("52W High", _format_price(_number(info, "fiftyTwoWeekHigh"))),
-        _metric("52W Low", _format_price(_number(info, "fiftyTwoWeekLow"))),
+        _metric(
+            "52W Range",
+            _format_price_range(
+                _number(info, "fiftyTwoWeekLow"),
+                _number(info, "fiftyTwoWeekHigh"),
+            ),
+        ),
     ]
     return [row for row in rows if row["value"] is not None]
 
@@ -134,6 +139,14 @@ def _format_price(value: float | None) -> str | None:
     if abs(value) >= 1000:
         return f"${value:,.0f}"
     return f"${value:,.2f}"
+
+
+def _format_price_range(low: float | None, high: float | None) -> str | None:
+    low_text = _format_price(low)
+    high_text = _format_price(high)
+    if low_text and high_text:
+        return f"{low_text} - {high_text}"
+    return low_text or high_text
 
 
 def _format_percent(value: float | None) -> str | None:

@@ -9,7 +9,7 @@
   --line-soft: #181a1d;
   --line-strong: #34383d;
   --text: #e6e8ea;
-  --muted: #797f87;
+  --muted: #8a9098;
   --muted-strong: #a4abb3;
   --accent: #b8a06a;
   --accent-dim: #7c6c44;
@@ -875,6 +875,10 @@ h1 {
   outline: none;
 }
 
+.change-abs-cell {
+  color: var(--muted-strong);
+}
+
 .symbol-cell {
   display: flex;
   flex-direction: column;
@@ -1392,7 +1396,7 @@ h1 {
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-columns: repeat(4, minmax(94px, 1fr));
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
   align-content: start;
   gap: 1px;
   background: var(--line-soft);
@@ -1405,6 +1409,10 @@ h1 {
   gap: 4px;
   padding: 10px;
   background: var(--surface);
+}
+
+.profile-metric:nth-last-child(1):nth-child(3n + 1) {
+  grid-column: 1 / -1;
 }
 
 .profile-metric span {
@@ -1650,6 +1658,14 @@ h1 {
 
   .profile-metrics {
     grid-template-columns: repeat(2, minmax(94px, 1fr));
+  }
+
+  .profile-metric:nth-last-child(1):nth-child(3n + 1) {
+    grid-column: auto;
+  }
+
+  .profile-metric:nth-last-child(1):nth-child(2n + 1) {
+    grid-column: 1 / -1;
   }
 
   .modal {

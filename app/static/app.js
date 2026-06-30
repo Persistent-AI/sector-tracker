@@ -442,7 +442,8 @@ function renderBoard(payload) {
 
       const header = document.createElement("div");
       header.className = "group-title";
-      header.innerHTML = "<span></span><span>Last</span><span>Abs</span><span>%</span><span>Src</span>";
+      header.innerHTML =
+        "<span></span><span>Last</span><span>1D Abs</span><span>1D %</span><span>Src</span>";
       header.firstChild.textContent = displayGroupName(group.name);
       panel.appendChild(header);
 

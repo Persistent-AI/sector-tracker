@@ -20,9 +20,10 @@ from app.providers.hyperliquid import HyperliquidProvider
 from app.providers.stooq import StooqProvider
 from app.providers.yahoo import YahooProvider
 from app.scheduler import ConnectionManager, history_refresh_loop, quote_poll_loop, stop_task
+from app.services.asset_profile import AssetProfileService
 from app.services.crypto_etf_flows import CryptoEtfFlowService
 from app.services.daily_board import DailyBoardService
-from app.services.history import HistoryService, bars_payload
+from app.services.history import HistoryService, bars_payload, find_asset
 from app.services.quotes import QuoteService, grouped_quotes_payload
 
 APP_DIR = Path(__file__).parent
@@ -70,6 +71,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.crypto_etf_flow_service = CryptoEtfFlowService(
         cache_seconds=settings.crypto_etf_flow_cache_seconds,
     )
+    app.state.asset_profile_service = AssetProfileService()
     app.state.connection_manager = ConnectionManager()
     app.state.watchlist_lock = asyncio.Lock()
     app.state.poll_task = None
@@ -273,6 +275,14 @@ async def history(
         "range": range_,
         "bars": bars_payload(bars),
     }
+
+
+@app.get("/api/profile/{symbol}")
+async def profile(symbol: str) -> dict[str, object]:
+    asset = find_asset(app.state.groups, clean_symbol(symbol))
+    if asset is None:
+        raise HTTPException(status_code=404, detail="asset_not_found")
+    return await asyncio.to_thread(app.state.asset_profile_service.get_profile, asset)
 
 
 @app.websocket("/ws/quotes")

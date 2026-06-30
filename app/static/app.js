@@ -13,6 +13,7 @@ const chartTitle = document.querySelector("#chart-title");
 const chartSubtitle = document.querySelector("#chart-subtitle");
 const chartElement = document.querySelector("#chart");
 const chartError = document.querySelector("#chart-error");
+const profileElement = document.querySelector("#asset-profile");
 const intervalButtons = Array.from(document.querySelectorAll(".intervals button"));
 const editorModal = document.querySelector("#editor-modal");
 const editorOpen = document.querySelector("#editor-open");
@@ -654,7 +655,9 @@ function openChart(symbol, name, provider) {
   chartSubtitle.textContent = [name, sourceLabels[provider] || provider].filter(Boolean).join(" / ");
   modal.classList.add("open");
   modal.setAttribute("aria-hidden", "false");
+  setProfileLoading(symbol);
   loadChart(symbol, activeRange, activeInterval);
+  loadAssetProfile(symbol);
 }
 
 function closeModal() {
@@ -665,6 +668,7 @@ function closeModal() {
     chart.remove();
     chart = null;
   }
+  profileElement.innerHTML = '<div class="profile-empty">Select an asset to load profile data</div>';
 }
 
 async function loadChart(symbol, range, interval) {
@@ -721,6 +725,72 @@ function renderChart(bars, interval) {
   });
   series.setData(bars);
   chart.timeScale().fitContent();
+}
+
+async function loadAssetProfile(symbol) {
+  try {
+    const response = await fetch(`/api/profile/${encodeURIComponent(symbol)}`);
+    if (!response.ok) throw new Error("profile_failed");
+    const payload = await response.json();
+    if (activeSymbol !== symbol) return;
+    renderAssetProfile(payload);
+  } catch {
+    if (activeSymbol !== symbol) return;
+    profileElement.innerHTML = `
+      <div class="profile-empty">
+        <strong>Profile unavailable</strong>
+        <span>Company data could not be loaded for ${escapeHtml(symbol)}.</span>
+      </div>
+    `;
+  }
+}
+
+function setProfileLoading(symbol) {
+  profileElement.innerHTML = `
+    <div class="profile-empty">
+      <strong>${escapeHtml(symbol)}</strong>
+      <span>Loading profile and fundamentals</span>
+    </div>
+  `;
+}
+
+function renderAssetProfile(profile) {
+  const metrics = Array.isArray(profile.metrics) ? profile.metrics : [];
+  const name = profile.name || profile.symbol || "Asset";
+  const meta = [
+    profile.sector,
+    profile.industry,
+    profile.exchange,
+  ].filter(Boolean).join(" / ");
+  const description = truncateText(
+    profile.description || "Company description is not available from the current data source.",
+    520
+  );
+
+  profileElement.innerHTML = `
+    <div class="profile-summary">
+      <div class="profile-kicker">Profile</div>
+      <h3>${escapeHtml(name)} <span>${escapeHtml(profile.symbol || "")}</span></h3>
+      <p class="profile-meta">${escapeHtml(meta || profile.asset_type || "Asset")}</p>
+      <p class="profile-description">${escapeHtml(description)}</p>
+    </div>
+    <div class="profile-metrics">
+      ${
+        metrics.length
+          ? metrics.map(profileMetric).join("")
+          : '<div class="profile-empty small">Fundamentals unavailable for this asset.</div>'
+      }
+    </div>
+  `;
+}
+
+function profileMetric(metric) {
+  return `
+    <div class="profile-metric">
+      <span>${escapeHtml(metric.label || "")}</span>
+      <strong>${escapeHtml(metric.value || "--")}</strong>
+    </div>
+  `;
 }
 
 function setConnection(state) {
@@ -799,6 +869,12 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
+}
+
+function truncateText(value, limit) {
+  const text = String(value || "").trim();
+  if (text.length <= limit) return text;
+  return `${text.slice(0, limit - 1).trim()}...`;
 }
 
 function toChartTime(value, interval) {

@@ -8,6 +8,7 @@ const viewButtons = Array.from(document.querySelectorAll(".view-tabs button"));
 const dailyView = document.querySelector("#daily-view");
 const marketsView = document.querySelector("#markets-view");
 const modal = document.querySelector("#chart-modal");
+const modalShell = document.querySelector("#chart-modal .modal-shell");
 const modalClose = document.querySelector("#modal-close");
 const chartTitle = document.querySelector("#chart-title");
 const chartSubtitle = document.querySelector("#chart-subtitle");
@@ -607,7 +608,7 @@ function renderRow(asset) {
   row.dataset.symbol = asset.symbol;
   row.dataset.provider = quote.provider || "";
   row.setAttribute("aria-label", `${asset.symbol} chart`);
-  row.addEventListener("click", () => openChart(asset.symbol, asset.name, quote.provider));
+  row.addEventListener("click", () => openChart(asset.symbol, asset.name, quote.provider, asset.type));
 
   row.appendChild(symbolCell(asset));
   row.appendChild(textCell(formatPrice(quote.last, quote.error)));
@@ -646,7 +647,7 @@ function sourceCell(quote) {
   return cell;
 }
 
-function openChart(symbol, name, provider) {
+function openChart(symbol, name, provider, assetType) {
   activeSymbol = symbol;
   activeRange = "ytd";
   activeInterval = "1d";
@@ -655,9 +656,14 @@ function openChart(symbol, name, provider) {
   chartSubtitle.textContent = [name, sourceLabels[provider] || provider].filter(Boolean).join(" / ");
   modal.classList.add("open");
   modal.setAttribute("aria-hidden", "false");
-  setProfileLoading(symbol);
   loadChart(symbol, activeRange, activeInterval);
-  loadAssetProfile(symbol);
+  if (isCryptoAsset(assetType)) {
+    hideProfilePanel();
+  } else {
+    showProfilePanel();
+    setProfileLoading(symbol);
+    loadAssetProfile(symbol);
+  }
 }
 
 function closeModal() {
@@ -668,6 +674,7 @@ function closeModal() {
     chart.remove();
     chart = null;
   }
+  showProfilePanel();
   profileElement.innerHTML = '<div class="profile-empty">Select an asset to load profile data</div>';
 }
 
@@ -755,6 +762,11 @@ function setProfileLoading(symbol) {
 }
 
 function renderAssetProfile(profile) {
+  if (isCryptoAsset(profile.asset_type)) {
+    hideProfilePanel();
+    return;
+  }
+  showProfilePanel();
   const metrics = Array.isArray(profile.metrics) ? profile.metrics : [];
   const name = profile.name || profile.symbol || "Asset";
   const meta = [
@@ -762,10 +774,7 @@ function renderAssetProfile(profile) {
     profile.industry,
     profile.exchange,
   ].filter(Boolean).join(" / ");
-  const description = truncateText(
-    profile.description || "Company description is not available from the current data source.",
-    520
-  );
+  const description = profile.description || "Company description is not available from the current data source.";
 
   profileElement.innerHTML = `
     <div class="profile-summary">
@@ -791,6 +800,21 @@ function profileMetric(metric) {
       <strong>${escapeHtml(metric.value || "--")}</strong>
     </div>
   `;
+}
+
+function showProfilePanel() {
+  profileElement.hidden = false;
+  modalShell.classList.remove("profile-hidden");
+}
+
+function hideProfilePanel() {
+  profileElement.hidden = true;
+  modalShell.classList.add("profile-hidden");
+  profileElement.replaceChildren();
+}
+
+function isCryptoAsset(assetType) {
+  return String(assetType || "").startsWith("crypto");
 }
 
 function setConnection(state) {
@@ -869,12 +893,6 @@ function escapeHtml(value) {
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;")
     .replaceAll("'", "&#039;");
-}
-
-function truncateText(value, limit) {
-  const text = String(value || "").trim();
-  if (text.length <= limit) return text;
-  return `${text.slice(0, limit - 1).trim()}...`;
 }
 
 function toChartTime(value, interval) {

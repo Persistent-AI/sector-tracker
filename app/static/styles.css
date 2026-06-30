@@ -903,10 +903,26 @@ h1 {
 }
 
 .modal-shell {
-  height: calc(100vh - 36px);
-  max-height: 1040px;
+  height: min(980px, calc(100vh - 36px));
   display: grid;
-  grid-template-rows: auto auto auto minmax(340px, 1fr) auto;
+  grid-template-rows: auto auto auto minmax(320px, 1fr) clamp(200px, 28vh, 300px);
+  grid-template-areas:
+    "modal-header"
+    "modal-intervals"
+    "modal-error"
+    "modal-chart"
+    "modal-profile";
+  overflow: hidden;
+}
+
+.modal-shell.profile-hidden {
+  height: min(820px, calc(100vh - 36px));
+  grid-template-rows: auto auto auto minmax(340px, 1fr);
+  grid-template-areas:
+    "modal-header"
+    "modal-intervals"
+    "modal-error"
+    "modal-chart";
 }
 
 .editor-shell {
@@ -916,6 +932,7 @@ h1 {
 }
 
 .modal-header {
+  grid-area: modal-header;
   min-height: 54px;
   display: flex;
   align-items: center;
@@ -1077,6 +1094,7 @@ h1 {
 }
 
 .intervals {
+  grid-area: modal-intervals;
   display: flex;
   flex-wrap: wrap;
   gap: 0;
@@ -1114,6 +1132,7 @@ h1 {
 }
 
 .chart-error {
+  grid-area: modal-error;
   padding: 10px 14px;
   border-bottom: 1px solid var(--red);
   color: var(--red);
@@ -1124,13 +1143,16 @@ h1 {
 }
 
 .chart {
+  grid-area: modal-chart;
   height: 100%;
   min-height: 340px;
 }
 
 .asset-profile {
-  min-height: 156px;
-  max-height: 230px;
+  grid-area: modal-profile;
+  min-height: 0;
+  height: clamp(200px, 28vh, 300px);
+  max-height: 100%;
   display: grid;
   grid-template-columns: minmax(360px, 0.95fr) minmax(420px, 1.05fr);
   border-top: 1px solid var(--line);
@@ -1138,13 +1160,20 @@ h1 {
   overflow: hidden;
 }
 
+.asset-profile[hidden] {
+  display: none;
+}
+
 .profile-summary {
   min-width: 0;
+  min-height: 0;
+  max-height: 100%;
   display: grid;
   align-content: start;
   gap: 6px;
   padding: 12px 14px;
   border-right: 1px solid var(--line);
+  overflow: auto;
 }
 
 .profile-kicker,
@@ -1189,16 +1218,13 @@ h1 {
 
 .profile-description {
   color: var(--muted-strong);
-  display: -webkit-box;
-  overflow: hidden;
   font-size: 11px;
   line-height: 1.45;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 4;
 }
 
 .profile-metrics {
   min-width: 0;
+  min-height: 0;
   display: grid;
   grid-template-columns: repeat(4, minmax(94px, 1fr));
   align-content: start;
@@ -1281,7 +1307,6 @@ h1 {
 
   .asset-profile {
     grid-template-columns: 1fr;
-    max-height: 280px;
     overflow: auto;
   }
 
@@ -1425,7 +1450,11 @@ h1 {
   }
 
   .modal-shell {
-    grid-template-rows: auto auto auto minmax(260px, 1fr) auto;
+    grid-template-rows: auto auto auto minmax(260px, 1fr) minmax(170px, 260px);
+  }
+
+  .modal-shell.profile-hidden {
+    grid-template-rows: auto auto auto minmax(260px, 1fr);
   }
 
   .chart {

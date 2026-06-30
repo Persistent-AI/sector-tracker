@@ -46,10 +46,6 @@ groups:
     type: equity
     source: yahoo
     exchange: NASDAQ
-  - symbol: MRVL
-    type: equity
-    source: yahoo
-    exchange: NASDAQ
   - symbol: ARM
     type: equity
     source: yahoo
@@ -72,6 +68,28 @@ groups:
     type: equity
     source: yahoo
     exchange: NASDAQ
+- name: MEMORY_POOLING
+  assets:
+  - symbol: ALAB
+    type: equity
+    source: yahoo
+    exchange: NASDAQ
+    name: Astera Labs
+  - symbol: CRDO
+    type: equity
+    source: yahoo
+    exchange: NASDAQ
+    name: Credo Technology
+  - symbol: PENG
+    type: equity
+    source: yahoo
+    exchange: NASDAQ
+    name: Penguin Solutions
+  - symbol: MRVL
+    type: equity
+    source: yahoo
+    exchange: NASDAQ
+    name: Marvell Technology
 - name: CRYPTO
   assets:
   - symbol: BTC

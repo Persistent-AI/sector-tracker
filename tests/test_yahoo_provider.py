@@ -1,7 +1,11 @@
 from datetime import UTC, datetime
 
-from app.models import AssetConfig
-from app.providers.yahoo import _quote_from_chart_result, _quotes_from_spark_payload
+from app.models import AssetConfig, Quote
+from app.providers.yahoo import (
+    _quote_from_chart_result,
+    _quote_with_usd_display,
+    _quotes_from_spark_payload,
+)
 
 
 def test_quote_from_chart_result_uses_latest_market_price() -> None:
@@ -69,3 +73,34 @@ def test_quotes_from_spark_payload_maps_responses_to_assets() -> None:
 
     assert quotes["XLU"].last == 45.5
     assert quotes["XLU"].change_pct == 1.111111
+
+
+def test_quote_with_usd_display_converts_foreign_quote() -> None:
+    quote = Quote.from_last_and_prev_close(
+        symbol="005930.KS",
+        asset_type="equity",
+        provider="yahoo",
+        last=314_500,
+        previous_close=334_000,
+        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+        currency="KRW",
+    )
+    fx_quote = Quote.from_last_and_prev_close(
+        symbol="KRW=X",
+        asset_type="index_proxy",
+        provider="yahoo",
+        last=1_550,
+        previous_close=1_540,
+        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+        currency="KRW",
+    )
+
+    converted = _quote_with_usd_display(quote, fx_quote)
+
+    assert converted.last == 314_500
+    assert converted.currency == "KRW"
+    assert converted.display_currency == "USD"
+    assert converted.display_last == 202.90322580645162
+    assert converted.display_previous_close == 216.88311688311688
+    assert converted.display_change_abs == -13.979891
+    assert converted.display_change_pct == -6.445818

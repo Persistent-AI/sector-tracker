@@ -15,6 +15,11 @@ def test_save_and_load_latest_quote(tmp_path: Path) -> None:
         previous_close=500.0,
         timestamp=datetime.now(UTC),
         currency="USD",
+        display_last=510.0,
+        display_previous_close=500.0,
+        display_change_abs=10.0,
+        display_change_pct=2.0,
+        display_currency="USD",
     )
 
     db.save_quotes(database, [quote])
@@ -24,6 +29,8 @@ def test_save_and_load_latest_quote(tmp_path: Path) -> None:
     assert loaded.symbol == "SPY"
     assert loaded.change_pct == 2.0
     assert loaded.currency == "USD"
+    assert loaded.display_last == 510.0
+    assert loaded.display_currency == "USD"
 
 
 def test_save_and_load_bars(tmp_path: Path) -> None:

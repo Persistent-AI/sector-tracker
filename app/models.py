@@ -21,6 +21,11 @@ class Quote:
     is_stale: bool = False
     error: str | None = None
     currency: str | None = None
+    display_last: float | None = None
+    display_previous_close: float | None = None
+    display_change_abs: float | None = None
+    display_change_pct: float | None = None
+    display_currency: str | None = None
 
     @classmethod
     def from_last_and_prev_close(
@@ -35,6 +40,11 @@ class Quote:
         is_stale: bool = False,
         error: str | None = None,
         currency: str | None = None,
+        display_last: float | None = None,
+        display_previous_close: float | None = None,
+        display_change_abs: float | None = None,
+        display_change_pct: float | None = None,
+        display_currency: str | None = None,
     ) -> Quote:
         if previous_close and previous_close != 0:
             change_abs = round(last - previous_close, 6)
@@ -54,6 +64,11 @@ class Quote:
             is_stale=is_stale,
             error=error,
             currency=currency,
+            display_last=display_last,
+            display_previous_close=display_previous_close,
+            display_change_abs=display_change_abs,
+            display_change_pct=display_change_pct,
+            display_currency=display_currency,
         )
 
 

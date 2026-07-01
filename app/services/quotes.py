@@ -181,6 +181,19 @@ def quote_payload(quote: Quote) -> dict[str, object]:
         "is_stale": quote.is_stale,
         "error": quote.error,
         "currency": quote.currency,
+        "display_last": quote.display_last if quote.display_last is not None else quote.last,
+        "display_previous_close": (
+            quote.display_previous_close
+            if quote.display_previous_close is not None
+            else quote.previous_close
+        ),
+        "display_change_abs": (
+            quote.display_change_abs if quote.display_change_abs is not None else quote.change_abs
+        ),
+        "display_change_pct": (
+            quote.display_change_pct if quote.display_change_pct is not None else quote.change_pct
+        ),
+        "display_currency": quote.display_currency or quote.currency,
     }
 
 

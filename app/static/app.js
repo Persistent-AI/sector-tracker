@@ -627,9 +627,9 @@ function sortedAssets(assets) {
 
 function sortValue(asset, key) {
   const quote = asset.quote || {};
-  if (key === "last") return numericOrNull(quote.last);
-  if (key === "abs") return numericOrNull(quote.change_abs);
-  if (key === "pct") return numericOrNull(quote.change_pct);
+  if (key === "last") return numericOrNull(displayQuoteValue(quote, "last"));
+  if (key === "abs") return numericOrNull(displayQuoteValue(quote, "change_abs"));
+  if (key === "pct") return numericOrNull(displayQuoteValue(quote, "change_pct"));
   return null;
 }
 
@@ -832,8 +832,24 @@ function renderRow(asset) {
   return row;
 }
 
+function displayQuote(quote) {
+  return {
+    last: displayQuoteValue(quote, "last"),
+    previous_close: displayQuoteValue(quote, "previous_close"),
+    change_abs: displayQuoteValue(quote, "change_abs"),
+    change_pct: displayQuoteValue(quote, "change_pct"),
+    currency: quote.display_currency || quote.currency,
+  };
+}
+
+function displayQuoteValue(quote, key) {
+  const displayKey = `display_${key}`;
+  return typeof quote[displayKey] === "number" ? quote[displayKey] : quote[key];
+}
+
 function updateRow(row, asset, options = {}) {
   const quote = asset.quote || {};
+  const display = displayQuote(quote);
   row.className = `asset-row${quote.is_stale ? " stale-row" : ""}`;
   row.dataset.symbol = asset.symbol;
   row.dataset.provider = quote.provider || "";
@@ -845,23 +861,23 @@ function updateRow(row, asset, options = {}) {
   updateSymbolCell(ensureRowCell(row, "symbol"), asset);
   updateValueCell(
     ensureRowCell(row, "last", "last-cell"),
-    formatBoardPrice(quote.last, quote.error, quote.currency),
-    quote.last,
+    formatBoardPrice(display.last, quote.error, display.currency),
+    display.last,
     "last-cell",
     !options.initial
   );
   updateValueCell(
     ensureRowCell(row, "abs", "change-abs-cell"),
-    formatBoardSignedChange(quote.change_abs, quote.currency),
-    quote.change_abs,
+    formatBoardSignedChange(display.change_abs, display.currency),
+    display.change_abs,
     "change-abs-cell",
     !options.initial
   );
   updateValueCell(
     ensureRowCell(row, "pct"),
-    formatSignedPct(quote.change_pct),
-    quote.change_pct,
-    changeClass(quote.change_pct),
+    formatSignedPct(display.change_pct),
+    display.change_pct,
+    changeClass(display.change_pct),
     !options.initial
   );
   updateSparklineCell(ensureRowCell(row, "trend", "sparkline-cell"), asset.summary?.sparkline || []);

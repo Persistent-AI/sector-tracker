@@ -21,7 +21,12 @@ CREATE TABLE IF NOT EXISTS latest_quotes (
     timestamp TEXT NOT NULL,
     is_stale INTEGER NOT NULL DEFAULT 0,
     error TEXT,
-    currency TEXT
+    currency TEXT,
+    display_last REAL,
+    display_previous_close REAL,
+    display_change_abs REAL,
+    display_change_pct REAL,
+    display_currency TEXT
 );
 
 CREATE TABLE IF NOT EXISTS bars (
@@ -44,6 +49,11 @@ def init_db(path: Path) -> None:
     with _connect(path) as conn:
         conn.executescript(SCHEMA)
         _ensure_column(conn, "latest_quotes", "currency", "TEXT")
+        _ensure_column(conn, "latest_quotes", "display_last", "REAL")
+        _ensure_column(conn, "latest_quotes", "display_previous_close", "REAL")
+        _ensure_column(conn, "latest_quotes", "display_change_abs", "REAL")
+        _ensure_column(conn, "latest_quotes", "display_change_pct", "REAL")
+        _ensure_column(conn, "latest_quotes", "display_currency", "TEXT")
 
 
 def save_quotes(path: Path, quotes: Sequence[Quote]) -> None:
@@ -55,9 +65,10 @@ def save_quotes(path: Path, quotes: Sequence[Quote]) -> None:
             """
             INSERT INTO latest_quotes (
                 symbol, asset_type, provider, last, previous_close, change_abs, change_pct,
-                timestamp, is_stale, error, currency
+                timestamp, is_stale, error, currency, display_last, display_previous_close,
+                display_change_abs, display_change_pct, display_currency
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(symbol) DO UPDATE SET
                 asset_type = excluded.asset_type,
                 provider = excluded.provider,
@@ -68,7 +79,12 @@ def save_quotes(path: Path, quotes: Sequence[Quote]) -> None:
                 timestamp = excluded.timestamp,
                 is_stale = excluded.is_stale,
                 error = excluded.error,
-                currency = excluded.currency
+                currency = excluded.currency,
+                display_last = excluded.display_last,
+                display_previous_close = excluded.display_previous_close,
+                display_change_abs = excluded.display_change_abs,
+                display_change_pct = excluded.display_change_pct,
+                display_currency = excluded.display_currency
             """,
             [
                 (
@@ -83,6 +99,11 @@ def save_quotes(path: Path, quotes: Sequence[Quote]) -> None:
                     int(quote.is_stale),
                     quote.error,
                     quote.currency,
+                    quote.display_last,
+                    quote.display_previous_close,
+                    quote.display_change_abs,
+                    quote.display_change_pct,
+                    quote.display_currency,
                 )
                 for quote in quotes
             ],
@@ -95,7 +116,8 @@ def load_latest_quote(path: Path, symbol: str) -> Quote | None:
         row = conn.execute(
             """
             SELECT symbol, asset_type, provider, last, previous_close, change_abs, change_pct,
-                   timestamp, is_stale, error, currency
+                   timestamp, is_stale, error, currency, display_last, display_previous_close,
+                   display_change_abs, display_change_pct, display_currency
             FROM latest_quotes
             WHERE symbol = ?
             """,
@@ -247,6 +269,11 @@ def _quote_from_row(row: sqlite3.Row) -> Quote:
         is_stale=bool(row["is_stale"]),
         error=cast(str | None, row["error"]),
         currency=cast(str | None, row["currency"]),
+        display_last=_optional_float(row["display_last"]),
+        display_previous_close=_optional_float(row["display_previous_close"]),
+        display_change_abs=_optional_float(row["display_change_abs"]),
+        display_change_pct=_optional_float(row["display_change_pct"]),
+        display_currency=cast(str | None, row["display_currency"]),
     )
 
 

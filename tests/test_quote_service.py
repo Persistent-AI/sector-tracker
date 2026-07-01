@@ -6,7 +6,7 @@ import pytest
 from app import db
 from app.models import AssetConfig, Bar, GroupConfig, Quote
 from app.providers.base import QuoteProvider
-from app.services.quotes import QuoteService
+from app.services.quotes import QuoteService, quote_payload
 
 
 class EmptyProvider(QuoteProvider):
@@ -138,3 +138,27 @@ async def test_quote_service_returns_error_quote_without_cache(tmp_path: Path) -
 
     assert grouped["TEST"][0].is_stale is True
     assert grouped["TEST"][0].error == "no_quote_available"
+
+
+def test_quote_payload_exposes_display_fields() -> None:
+    quote = Quote.from_last_and_prev_close(
+        symbol="005930.KS",
+        asset_type="equity",
+        provider="yahoo",
+        last=314_500,
+        previous_close=334_000,
+        timestamp=datetime(2026, 1, 1, tzinfo=UTC),
+        currency="KRW",
+        display_last=202.9,
+        display_previous_close=216.9,
+        display_change_abs=-14.0,
+        display_change_pct=-6.45,
+        display_currency="USD",
+    )
+
+    payload = quote_payload(quote)
+
+    assert payload["last"] == 314_500
+    assert payload["currency"] == "KRW"
+    assert payload["display_last"] == 202.9
+    assert payload["display_currency"] == "USD"

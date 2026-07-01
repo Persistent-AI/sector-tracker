@@ -5,6 +5,7 @@ import json
 import math
 import subprocess
 from collections.abc import Iterable, Sequence
+from dataclasses import replace
 from datetime import UTC, datetime
 from time import sleep
 from typing import Any
@@ -28,6 +29,9 @@ YAHOO_SPARK_CHUNK_SIZE = 6
 YAHOO_SPARK_CHUNK_DELAY_SECONDS = 1.0
 YAHOO_MAX_CHART_FALLBACKS = 8
 YAHOO_USER_AGENT = "Mozilla/5.0"
+YAHOO_USD_FX_SYMBOLS = {
+    "KRW": "KRW=X",
+}
 
 
 class YahooProvider(QuoteProvider):
@@ -48,7 +52,7 @@ class YahooProvider(QuoteProvider):
             quote = self._get_chart_quote_sync(asset)
             if quote is not None:
                 quotes_by_symbol[quote.symbol] = quote
-        return list(quotes_by_symbol.values())
+        return list(self._with_usd_display_quotes(quotes_by_symbol).values())
 
     async def get_history(self, asset: AssetConfig, *, interval: str, range_: str) -> list[Bar]:
         return await asyncio.to_thread(self._get_history_sync, asset, interval, range_)
@@ -91,6 +95,30 @@ class YahooProvider(QuoteProvider):
             return _quote_from_chart_result(asset, result)
         except Exception:
             return None
+
+    def _with_usd_display_quotes(self, quotes_by_symbol: dict[str, Quote]) -> dict[str, Quote]:
+        currencies = {
+            quote.currency
+            for quote in quotes_by_symbol.values()
+            if quote.currency and quote.currency != "USD"
+        }
+        fx_assets = [
+            AssetConfig(symbol=symbol, type="index_proxy", source="yahoo", name=currency)
+            for currency, symbol in YAHOO_USD_FX_SYMBOLS.items()
+            if currency in currencies
+        ]
+        if not fx_assets:
+            return quotes_by_symbol
+        fx_quotes = self._get_spark_quotes_sync(fx_assets)
+        fx_by_currency = {
+            asset.name: fx_quotes[asset.symbol]
+            for asset in fx_assets
+            if asset.name and asset.symbol in fx_quotes
+        }
+        return {
+            symbol: _quote_with_usd_display(quote, fx_by_currency.get(quote.currency or ""))
+            for symbol, quote in quotes_by_symbol.items()
+        }
 
     def _get_history_sync(self, asset: AssetConfig, interval: str, range_: str) -> list[Bar]:
         ticker = yf.Ticker(asset.symbol)
@@ -229,6 +257,33 @@ def _quote_from_chart_result(asset: AssetConfig, result: dict[str, Any]) -> Quot
         previous_close=previous_close,
         timestamp=market_price[1] if market_price else datetime.now(UTC),
         currency=_currency(meta),
+    )
+
+
+def _quote_with_usd_display(quote: Quote, fx_quote: Quote | None) -> Quote:
+    if quote.currency in (None, "USD") or fx_quote is None or fx_quote.last <= 0:
+        return quote
+    display_last = quote.last / fx_quote.last
+    display_previous_close = None
+    if quote.previous_close is not None:
+        fx_previous_close = (
+            fx_quote.previous_close
+            if fx_quote.previous_close is not None and fx_quote.previous_close > 0
+            else fx_quote.last
+        )
+        display_previous_close = quote.previous_close / fx_previous_close
+    display_change_abs = None
+    display_change_pct = None
+    if display_previous_close is not None and display_previous_close != 0:
+        display_change_abs = round(display_last - display_previous_close, 6)
+        display_change_pct = round(display_change_abs / display_previous_close * 100, 6)
+    return replace(
+        quote,
+        display_last=display_last,
+        display_previous_close=display_previous_close,
+        display_change_abs=display_change_abs,
+        display_change_pct=display_change_pct,
+        display_currency="USD",
     )
 
 

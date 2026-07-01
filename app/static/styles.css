@@ -908,6 +908,8 @@ h1 {
 
 .group-title button {
   width: 100%;
+  min-width: 0;
+  overflow: hidden;
   border: 0;
   background: transparent;
   color: inherit;
@@ -915,7 +917,9 @@ h1 {
   font: inherit;
   letter-spacing: inherit;
   text-align: inherit;
+  text-overflow: ellipsis;
   text-transform: inherit;
+  white-space: nowrap;
 }
 
 .group-title button:hover,
@@ -996,6 +1000,7 @@ h1 {
 }
 
 .symbol-cell {
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -1004,16 +1009,24 @@ h1 {
 }
 
 .symbol-cell strong {
+  min-width: 0;
+  overflow: hidden;
   font-size: 12px;
   font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .symbol-cell small {
+  min-width: 0;
+  overflow: hidden;
   color: var(--muted);
   font-family: var(--font-mono);
   font-size: 9px;
   letter-spacing: 0.03em;
+  text-overflow: ellipsis;
   text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .source-cell {

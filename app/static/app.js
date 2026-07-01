@@ -960,6 +960,8 @@ function sparklineSvg(values) {
 function filterMarketsByGroup(groupName) {
   if (!groupName) return;
   activeGroupFilter = groupName;
+  marketSearchQuery = "";
+  marketSearch.value = "";
   selectView("markets");
   renderBoard(latestData);
 }

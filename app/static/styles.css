@@ -827,7 +827,7 @@ h1 {
 
 .board {
   column-gap: 12px;
-  columns: 360px;
+  columns: 390px;
 }
 
 .market-tools {
@@ -888,7 +888,7 @@ h1 {
 .group-title,
 .asset-row {
   display: grid;
-  grid-template-columns: minmax(92px, 1fr) 76px 70px 70px 68px 38px;
+  grid-template-columns: minmax(96px, 1fr) 72px 64px 64px 62px;
   align-items: stretch;
 }
 
@@ -1029,7 +1029,7 @@ h1 {
 }
 
 .sparkline {
-  width: 62px;
+  width: 48px;
   height: 22px;
 }
 
@@ -1934,7 +1934,7 @@ h1 {
 
   .group-title,
   .asset-row {
-    grid-template-columns: minmax(76px, 1fr) 62px 58px 58px 54px 32px;
+    grid-template-columns: minmax(76px, 1fr) 62px 56px 58px 48px;
   }
 
   .modal-shell {

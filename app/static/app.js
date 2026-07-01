@@ -564,8 +564,7 @@ function ensureGroupPanel(groupName) {
     groupHeaderCell("Last", "last"),
     groupHeaderCell("1D Abs", "abs"),
     groupHeaderCell("1D %", "pct"),
-    groupHeaderCell("Trend", "trend"),
-    groupHeaderCell("Src", "source")
+    groupHeaderCell("Trend", "trend")
   );
   panel.appendChild(header);
   return panel;
@@ -866,7 +865,6 @@ function updateRow(row, asset, options = {}) {
     !options.initial
   );
   updateSparklineCell(ensureRowCell(row, "trend", "sparkline-cell"), asset.summary?.sparkline || []);
-  updateSourceCell(ensureRowCell(row, "source", "source-cell"), quote);
 }
 
 function ensureRowCell(row, key, className = "") {
@@ -912,12 +910,6 @@ function updateSparklineCell(cell, values) {
   cell.className = "sparkline-cell";
   cell.title = values.length ? "Recent trend" : "No trend history";
   cell.innerHTML = sparklineSvg(values);
-}
-
-function updateSourceCell(cell, quote) {
-  cell.className = "source-cell";
-  cell.textContent = quote.is_stale ? "STALE" : sourceLabels[quote.provider] || "--";
-  cell.title = quote.provider || "Source unavailable";
 }
 
 function flashCell(cell, delta) {
@@ -971,7 +963,7 @@ function openChart(asset) {
     hideProfilePanel();
   } else {
     showProfilePanel();
-    setProfileLoading(symbol);
+    setProfileLoading(symbol, asset);
     loadAssetProfile(symbol);
   }
 }
@@ -986,6 +978,7 @@ function closeModal() {
   }
   showProfilePanel();
   profileElement.innerHTML = '<div class="profile-empty">Select an asset to load profile data</div>';
+  resetProfileScroll();
 }
 
 async function loadChart(symbol, range, interval) {
@@ -1053,22 +1046,28 @@ async function loadAssetProfile(symbol) {
     renderAssetProfile(payload);
   } catch {
     if (activeSymbol !== symbol) return;
+    const summary = activeAsset?.summary || findAssetSummary(symbol);
     profileElement.innerHTML = `
       <div class="profile-empty">
         <strong>Profile unavailable</strong>
         <span>Company data could not be loaded for ${escapeHtml(symbol)}.</span>
       </div>
+      ${profileMarketContext(summary)}
     `;
+    resetProfileScroll();
   }
 }
 
-function setProfileLoading(symbol) {
+function setProfileLoading(symbol, asset) {
+  const summary = asset?.summary || findAssetSummary(symbol);
   profileElement.innerHTML = `
     <div class="profile-empty">
       <strong>${escapeHtml(symbol)}</strong>
       <span>Loading profile and fundamentals</span>
     </div>
+    ${profileMarketContext(summary)}
   `;
+  resetProfileScroll();
 }
 
 function renderAssetProfile(profile) {
@@ -1109,7 +1108,15 @@ function renderAssetProfile(profile) {
     </div>
     ${profileMarketContext(summary)}
   `;
+  resetProfileScroll();
   bindProfileDescriptionToggle();
+}
+
+function resetProfileScroll() {
+  profileElement.scrollTop = 0;
+  profileElement.querySelectorAll(".profile-summary, .profile-metrics").forEach((element) => {
+    element.scrollTop = 0;
+  });
 }
 
 function profileMetric(metric) {

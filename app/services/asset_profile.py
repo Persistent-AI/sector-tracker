@@ -26,9 +26,12 @@ class AssetProfileService:
                 if isinstance(info, dict):
                     payload = _profile_from_yahoo_info(asset, info)
             except Exception:
+                if cached and _is_cacheable_profile(cached[1]):
+                    return cached[1]
                 payload["status"] = "partial"
 
-        self._cache[asset.symbol] = (time.monotonic(), payload)
+        if _is_cacheable_profile(payload):
+            self._cache[asset.symbol] = (time.monotonic(), payload)
         return payload
 
 
@@ -106,6 +109,12 @@ def _etf_metrics(info: dict[str, Any]) -> list[dict[str, object]]:
 
 def _metric(label: str, value: str | None) -> dict[str, object]:
     return {"label": label, "value": value}
+
+
+def _is_cacheable_profile(payload: dict[str, object]) -> bool:
+    if payload.get("status") != "ok":
+        return False
+    return bool(payload.get("description") or payload.get("metrics"))
 
 
 def _text(info: dict[str, Any], *keys: str) -> str | None:

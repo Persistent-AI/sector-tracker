@@ -124,6 +124,9 @@ class YahooProvider(QuoteProvider):
         return _bars_with_usd_display(asset, bars, interval, range_)
 
 
+INTRADAY_RANGE_FALLBACK = {"1d": "5d"}
+
+
 def _get_raw_history_sync(asset: AssetConfig, interval: str, range_: str) -> list[Bar]:
     """Fetch OHLCV bars from Yahoo's v8 chart API.
 
@@ -131,9 +134,23 @@ def _get_raw_history_sync(asset: AssetConfig, interval: str, range_: str) -> lis
     cookie/crumb scraping gets rate-limited from datacenter IPs (Vercel),
     which made history silently fall back to stale cached bars.
     """
+    yahoo_range = _yahoo_period(range_)
+    bars = _fetch_chart_bars(asset, interval, yahoo_range)
+    if not bars:
+        # Yahoo anchors range=1d to the CURRENT trading day, so pre-open
+        # sessions (e.g. KRX mornings, US pre-market) return zero 1m/5m rows.
+        # Widen to 5d; the history service trims back to the requested range
+        # relative to the newest bar, which lands on the last session.
+        fallback = INTRADAY_RANGE_FALLBACK.get(yahoo_range)
+        if fallback is not None:
+            bars = _fetch_chart_bars(asset, interval, fallback)
+    return bars
+
+
+def _fetch_chart_bars(asset: AssetConfig, interval: str, yahoo_range: str) -> list[Bar]:
     params = {
         "interval": interval,
-        "range": _yahoo_period(range_),
+        "range": yahoo_range,
         "includePrePost": "true",
         "events": "div,splits",
     }

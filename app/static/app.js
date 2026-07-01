@@ -2145,5 +2145,8 @@ const DATE_ONLY_INTERVALS = new Set(["1d", "1wk"]);
 
 function toChartTime(value, interval) {
   if (DATE_ONLY_INTERVALS.has(interval)) return value.slice(0, 10);
-  return Math.floor(new Date(value).getTime() / 1000);
+  // lightweight-charts renders epoch labels in UTC; shift by the local
+  // offset so the axis matches the local times shown in the subtitle.
+  const date = new Date(value);
+  return Math.floor(date.getTime() / 1000) - date.getTimezoneOffset() * 60;
 }

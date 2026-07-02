@@ -8,7 +8,7 @@ import subprocess
 from collections.abc import Iterable, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime
-from time import sleep
+from time import monotonic, sleep
 from typing import Any
 from urllib.parse import quote as url_quote
 from urllib.parse import urlencode
@@ -28,6 +28,12 @@ YAHOO_CHART_URLS = (
 # fresh universe fetch from ~15s to ~3s. Yahoo accepts far larger batches.
 YAHOO_SPARK_CHUNK_SIZE = 20
 YAHOO_SPARK_CHUNK_DELAY_SECONDS = 0.5
+# Deliberately bare: a full Chrome UA on curl's TLS fingerprint trips
+# Yahoo's bot scoring instantly (verified: bare UA 200, Chrome UA 429).
+YAHOO_USER_AGENT = "Mozilla/5.0"
+# After a 429, stop hitting Yahoo for this long and serve SQLite-cached
+# data instead; continuing to hammer extends the per-IP ban.
+YAHOO_RATE_LIMIT_COOLDOWN_SECONDS = 60.0
 YAHOO_USD_FX_SYMBOLS = {
     "KRW": "KRW=X",
 }
@@ -289,6 +295,10 @@ def _get_json_with_retry(
         for url in urls:
             try:
                 return _get_json(url, params)
+            except YahooRateLimited as exc:
+                # Retrying a 429 makes the ban longer; bail immediately and
+                # let callers fall back to cached bars.
+                raise exc
             except Exception as exc:
                 error = exc
                 continue
@@ -299,11 +309,22 @@ def _get_json_with_retry(
     raise RuntimeError("request did not run")
 
 
+_rate_limited_until = 0.0
+
+
+class YahooRateLimited(Exception):
+    pass
+
+
 def _get_json(url: str, params: dict[str, str]) -> dict[str, Any]:
+    global _rate_limited_until
+    if monotonic() < _rate_limited_until:
+        raise YahooRateLimited("cooling down after 429")
     completed = subprocess.run(
         [
             "curl",
             "-fsSL",
+            "--compressed",
             "-A",
             YAHOO_USER_AGENT,
             "--max-time",
@@ -311,9 +332,13 @@ def _get_json(url: str, params: dict[str, str]) -> dict[str, Any]:
             f"{url}?{urlencode(params)}",
         ],
         capture_output=True,
-        check=True,
         text=True,
     )
+    if completed.returncode != 0:
+        if "429" in completed.stderr:
+            _rate_limited_until = monotonic() + YAHOO_RATE_LIMIT_COOLDOWN_SECONDS
+            raise YahooRateLimited(completed.stderr.strip()[:120])
+        raise RuntimeError(completed.stderr.strip()[:120] or f"curl exit {completed.returncode}")
     return json.loads(completed.stdout)
 
 

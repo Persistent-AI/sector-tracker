@@ -9,6 +9,7 @@ from pathlib import Path
 from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.gzip import GZipMiddleware
 from pydantic import BaseModel, Field
 
 from app import db
@@ -90,7 +91,24 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="Cross-Asset Board", lifespan=lifespan)
-app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+# Vercel's edge gzips responses; this covers local/VPS deployments too.
+app.add_middleware(GZipMiddleware, minimum_size=1024)
+
+
+class CachedStaticFiles(StaticFiles):
+    """Static files with immutable caching.
+
+    Every static reference carries a ?v= cache-buster, so files can be
+    cached for a year; version bumps change the URL.
+    """
+
+    def file_response(self, *args: object, **kwargs: object):  # type: ignore[override]
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
+
+
+app.mount("/static", CachedStaticFiles(directory=STATIC_DIR), name="static")
 
 
 def ensure_runtime_watchlist(settings: Settings) -> None:
@@ -333,8 +351,22 @@ async def quotes_ws(websocket: WebSocket) -> None:
         manager.disconnect(websocket)
 
 
+_board_payload_cache: tuple[dict[str, list[Quote]], dict[str, object]] | None = None
+
+
 def board_payload(grouped: dict[str, list[Quote]]) -> dict[str, object]:
-    summaries = app.state.daily_board_service.market_summaries(app.state.groups, grouped)
+    """Build the full board JSON, memoized on the quote snapshot.
+
+    QuoteService returns the SAME dict object for the whole cache window
+    (15s in production), so identity is a correct cache key: while quotes
+    are unchanged, polls skip reloading ~40k bars and recomputing metrics.
+    Holding the dict itself (not just id()) keeps the key valid across GC.
+    """
+    global _board_payload_cache
+    if _board_payload_cache is not None and _board_payload_cache[0] is grouped:
+        return _board_payload_cache[1]
+    overview, summaries = app.state.daily_board_service.build_board(app.state.groups, grouped)
     payload = grouped_quotes_payload(app.state.groups, grouped, summaries=summaries)
-    payload["overview"] = app.state.daily_board_service.build(app.state.groups, grouped)
+    payload["overview"] = overview
+    _board_payload_cache = (grouped, payload)
     return payload

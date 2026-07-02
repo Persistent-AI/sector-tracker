@@ -15,16 +15,29 @@ class DailyBoardService:
     def __init__(self, database_path: Path) -> None:
         self.database_path = database_path
 
-    def build(
+    def build_board(
         self,
         groups: list[GroupConfig],
         grouped_quotes: dict[str, list[Quote]],
-    ) -> dict[str, object]:
+    ) -> tuple[dict[str, object], dict[str, dict[str, object]]]:
+        """Compute overview and per-asset summaries from ONE bars load.
+
+        Loading the bars table materializes tens of thousands of Bar objects;
+        doing it once per poll instead of twice halves the hot path.
+        """
         cached = db.load_bars_by_symbol(self.database_path, "1d")
         assets = _unique_assets(groups)
         quotes = _quotes_by_symbol(grouped_quotes)
         metrics = {
             symbol: _asset_metrics(
+                asset,
+                quotes.get(symbol),
+                _preferred_bars(asset, cached),
+            )
+            for symbol, asset in assets.items()
+        }
+        summaries = {
+            symbol: _market_summary(
                 asset,
                 quotes.get(symbol),
                 _preferred_bars(asset, cached),
@@ -37,8 +50,7 @@ class DailyBoardService:
         regime = _regime_metrics(themes, universe, benchmarks)
         rotation = _rotation_metrics(themes)
         timestamps = [quote.timestamp for quote in quotes.values()]
-
-        return {
+        overview = {
             "as_of": max(timestamps).isoformat() if timestamps else datetime.now(UTC).isoformat(),
             "regime": regime,
             "universe": universe,
@@ -46,23 +58,23 @@ class DailyBoardService:
             "themes": themes,
             "rotation": rotation,
         }
+        return overview, summaries
+
+    def build(
+        self,
+        groups: list[GroupConfig],
+        grouped_quotes: dict[str, list[Quote]],
+    ) -> dict[str, object]:
+        overview, _ = self.build_board(groups, grouped_quotes)
+        return overview
 
     def market_summaries(
         self,
         groups: list[GroupConfig],
         grouped_quotes: dict[str, list[Quote]],
     ) -> dict[str, dict[str, object]]:
-        cached = db.load_bars_by_symbol(self.database_path, "1d")
-        assets = _unique_assets(groups)
-        quotes = _quotes_by_symbol(grouped_quotes)
-        return {
-            symbol: _market_summary(
-                asset,
-                quotes.get(symbol),
-                _preferred_bars(asset, cached),
-            )
-            for symbol, asset in assets.items()
-        }
+        _, summaries = self.build_board(groups, grouped_quotes)
+        return summaries
 
 
 def _unique_assets(groups: list[GroupConfig]) -> dict[str, AssetConfig]:

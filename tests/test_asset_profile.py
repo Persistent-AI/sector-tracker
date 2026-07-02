@@ -92,7 +92,9 @@ def test_partial_profile_failures_are_not_long_cached(monkeypatch) -> None:
                 "marketCap": 1_000_000_000,
             }
 
-    monkeypatch.setattr(asset_profile.yf, "Ticker", FakeTicker)
+    import yfinance
+
+    monkeypatch.setattr(yfinance, "Ticker", FakeTicker)
     service = AssetProfileService(cache_seconds=3600)
     asset = AssetConfig(symbol="ASTS", type="equity", source="yahoo", name="AST SpaceMobile")
 
@@ -126,7 +128,9 @@ def test_expired_good_profile_is_served_when_refresh_fails(monkeypatch) -> None:
         "description": "Cached profile",
         "metrics": [{"label": "Market Cap", "value": "$1.00T"}],
     }
-    monkeypatch.setattr(asset_profile.yf, "Ticker", FailingTicker)
+    import yfinance
+
+    monkeypatch.setattr(yfinance, "Ticker", FailingTicker)
     service = AssetProfileService(cache_seconds=1)
     service._cache["TSM"] = (0.0, cached)
     asset = AssetConfig(symbol="TSM", type="equity", source="yahoo", name="TSM")

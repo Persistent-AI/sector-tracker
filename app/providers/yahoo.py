@@ -24,10 +24,10 @@ YAHOO_CHART_URLS = (
     "https://query1.finance.yahoo.com/v8/finance/chart/{symbol}",
     "https://query2.finance.yahoo.com/v8/finance/chart/{symbol}",
 )
-YAHOO_SPARK_CHUNK_SIZE = 6
-YAHOO_SPARK_CHUNK_DELAY_SECONDS = 1.0
-YAHOO_MAX_CHART_FALLBACKS = 8
-YAHOO_USER_AGENT = "Mozilla/5.0"
+# 20-symbol chunks: 88 symbols -> 5 spark calls instead of 15, cutting a
+# fresh universe fetch from ~15s to ~3s. Yahoo accepts far larger batches.
+YAHOO_SPARK_CHUNK_SIZE = 20
+YAHOO_SPARK_CHUNK_DELAY_SECONDS = 0.5
 YAHOO_USD_FX_SYMBOLS = {
     "KRW": "KRW=X",
 }

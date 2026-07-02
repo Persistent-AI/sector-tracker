@@ -4,7 +4,9 @@ import math
 import time
 from typing import Any
 
-import yfinance as yf
+# yfinance (and its pandas dependency) is imported lazily inside the two
+# call sites: importing it at module level adds ~1s+ to serverless cold
+# starts for a dependency only the profile endpoint uses.
 
 from app.models import AssetConfig
 
@@ -26,6 +28,8 @@ class AssetProfileService:
         payload = _base_profile(asset)
         if asset.source == "yahoo" and asset.type in {"equity", "etf", "index_proxy"}:
             try:
+                import yfinance as yf
+
                 info = yf.Ticker(asset.symbol).get_info()
                 if isinstance(info, dict):
                     payload = _profile_from_yahoo_info(asset, info)
@@ -160,6 +164,8 @@ def _usd_money_divisor(info: dict[str, Any]) -> float | None:
     if symbol is None:
         return None
     try:
+        import yfinance as yf
+
         df = yf.Ticker(symbol).history(period="5d", interval="1d", auto_adjust=False)
     except Exception:
         return None

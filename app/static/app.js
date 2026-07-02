@@ -61,6 +61,9 @@ let feedMode = "poll"; // "ws" locally, "poll" on serverless deployments
 let activeView = "daily";
 let pendingChartFromUrl = null;
 let restoringUrlState = false;
+const BOARD_CACHE_KEY = "board-cache-v1";
+const BOARD_CACHE_MAX_AGE_MS = 24 * 3600 * 1000;
+let dataIsCached = false;
 
 const sourceLabels = {
   yahoo: "YH",
@@ -250,10 +253,12 @@ function openPendingChartFromUrl() {
   if (asset) openChart(asset, { range });
 }
 
+
 function init() {
-  window.lucide?.createIcons();
+  // icons are inline SVG; no icon library needed
   setConnection("connecting");
   restoreUrlState();
+  restoreCachedBoard();
   fetchQuotes();
   fetchCryptoEtfFlows();
   feedMode = shouldUseWebSocket() ? "ws" : "poll";
@@ -373,6 +378,31 @@ function handleViewTabKeydown(event) {
   nextButton.focus();
   selectView(nextButton.dataset.view || "daily");
 }
+// --- Instant first paint -------------------------------------------------
+// A cold serverless instance can take many seconds to answer the first
+// /api/quotes (Yahoo throttling + fresh fetch). Persist the last good board
+// and paint it immediately on load, flagged as cached until live data lands.
+function restoreCachedBoard() {
+  try {
+    const raw = localStorage.getItem(BOARD_CACHE_KEY);
+    if (!raw) return;
+    const { at, payload } = JSON.parse(raw);
+    if (!payload?.groups || Date.now() - at > BOARD_CACHE_MAX_AGE_MS) return;
+    dataIsCached = true;
+    applyQuotes(payload);
+  } catch (error) {
+    /* corrupt cache is not worth surfacing */
+  }
+}
+
+function persistBoardCache(payload) {
+  try {
+    localStorage.setItem(BOARD_CACHE_KEY, JSON.stringify({ at: Date.now(), payload }));
+  } catch (error) {
+    /* quota exceeded / private mode — cache is best-effort */
+  }
+}
+
 
 async function fetchQuotes() {
   refreshButton.classList.add("loading");
@@ -380,7 +410,9 @@ async function fetchQuotes() {
     const response = await fetch("/api/quotes");
     if (!response.ok) throw new Error("quotes_failed");
     const payload = await response.json();
+    dataIsCached = false;
     applyQuotes(payload);
+    persistBoardCache(payload);
     setConnection("live");
   } catch (error) {
     setConnection("error");
@@ -410,7 +442,9 @@ function openSocket() {
   socket.addEventListener("message", (event) => {
     const message = JSON.parse(event.data);
     if (message.type === "quotes") {
+      dataIsCached = false;
       applyQuotes(message.data);
+      persistBoardCache(message.data);
       setConnection("live");
     }
   });
@@ -468,7 +502,7 @@ function updateHeader(overview) {
   liveFreshness.textContent = time === "--" ? "Updated --" : `Updated ${time}`;
   const usSession = sessionState("us");
   statusCopy.textContent = [
-    feedMode === "ws" ? "LIVE QUOTES" : "POLLED QUOTES",
+    dataIsCached ? "CACHED VIEW · REFRESHING" : feedMode === "ws" ? "LIVE QUOTES" : "POLLED QUOTES",
     usSession ? `US ${SESSION_STATE_COPY[usSession.state].toUpperCase()}` : null,
     `${universe.quoted || 0}/${universe.total || 0} QUOTED`,
     `HISTORY ${universe.history_count || 0}/${universe.total || 0}`,
@@ -477,11 +511,19 @@ function updateHeader(overview) {
   ].filter(Boolean).join(" · ");
 }
 
+let lastDailyRenderKey = "";
+
 function renderDailyBoard(overview, cryptoEtfFlows) {
   if (!overview) {
     dailyBoard.innerHTML = '<div class="empty-state">Market read unavailable</div>';
+    lastDailyRenderKey = "";
     return;
   }
+  // Rebuilding ~6 panels of innerHTML every poll costs parse + layout and
+  // drops hover state; skip when the data is byte-identical.
+  const renderKey = JSON.stringify([overview, cryptoEtfFlows?.status, cryptoEtfFlows?.updated_at]);
+  if (renderKey === lastDailyRenderKey) return;
+  lastDailyRenderKey = renderKey;
 
   const regime = overview.regime || {};
   const universe = overview.universe || {};
@@ -1300,6 +1342,9 @@ function updateValueCell(cell, text, value, className, shouldFlash) {
 }
 
 function updateSparklineCell(cell, values) {
+  const key = values.join(",");
+  if (cell.dataset.sparkKey === key) return;
+  cell.dataset.sparkKey = key;
   cell.className = "sparkline-cell";
   cell.title = values.length ? "Recent trend" : "No trend history";
   cell.innerHTML = sparklineSvg(values);
@@ -1402,6 +1447,27 @@ function closeModal() {
   syncUrlState();
 }
 
+let chartLibPromise = null;
+
+function ensureChartLibrary() {
+  // lightweight-charts (~52KB gz) is only needed once a chart opens;
+  // loading it lazily keeps it off the initial page load entirely.
+  if (window.LightweightCharts) return Promise.resolve();
+  if (!chartLibPromise) {
+    chartLibPromise = new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = "/static/vendor/lightweight-charts.standalone.production.js?v=20260702-7";
+      script.onload = () => resolve();
+      script.onerror = () => {
+        chartLibPromise = null;
+        reject(new Error("Chart library unavailable"));
+      };
+      document.head.appendChild(script);
+    });
+  }
+  return chartLibPromise;
+}
+
 async function loadChart(symbol, range, interval) {
   const requestId = chartLoadToken + 1;
   chartLoadToken = requestId;
@@ -1417,9 +1483,10 @@ async function loadChart(symbol, range, interval) {
   }
 
   try {
-    const response = await fetch(
-      `/api/history/${encodeURIComponent(symbol)}?interval=${interval}&range=${range}`
-    );
+    const [response] = await Promise.all([
+      fetch(`/api/history/${encodeURIComponent(symbol)}?interval=${interval}&range=${range}`),
+      ensureChartLibrary(),
+    ]);
     if (!response.ok) throw new Error("history_failed");
     const payload = await response.json();
     if (activeSymbol !== symbol || requestId !== chartLoadToken) return;

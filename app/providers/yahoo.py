@@ -6,6 +6,7 @@ import json
 import math
 import subprocess
 from collections.abc import Iterable, Sequence
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from datetime import UTC, datetime
 from time import monotonic, sleep
@@ -53,10 +54,14 @@ class YahooProvider(QuoteProvider):
         missing_assets = [
             asset for asset in unique_assets if asset.symbol not in quotes_by_symbol
         ]
-        for asset in missing_assets[:YAHOO_MAX_CHART_FALLBACKS]:
-            quote = self._get_chart_quote_sync(asset)
-            if quote is not None:
-                quotes_by_symbol[quote.symbol] = quote
+        # Spark and chart are rate-limited independently; when spark is banned
+        # (shared serverless egress IPs), recover every symbol through the
+        # chart endpoint in parallel instead of capping at 8 sequential calls.
+        if missing_assets:
+            with ThreadPoolExecutor(max_workers=8) as pool:
+                for quote in pool.map(self._get_chart_quote_sync, missing_assets):
+                    if quote is not None:
+                        quotes_by_symbol[quote.symbol] = quote
         return list(self._with_usd_display_quotes(quotes_by_symbol).values())
 
     async def get_history(self, asset: AssetConfig, *, interval: str, range_: str) -> list[Bar]:
@@ -309,17 +314,23 @@ def _get_json_with_retry(
     raise RuntimeError("request did not run")
 
 
-_rate_limited_until = 0.0
+# Spark (v7) and chart (v8) are throttled independently by Yahoo, so track
+# cooldowns per endpoint family — a banned spark must not block chart calls.
+_rate_limited_until: dict[str, float] = {}
 
 
 class YahooRateLimited(Exception):
     pass
 
 
+def _endpoint_family(url: str) -> str:
+    return "spark" if "/spark" in url else "chart"
+
+
 def _get_json(url: str, params: dict[str, str]) -> dict[str, Any]:
-    global _rate_limited_until
-    if monotonic() < _rate_limited_until:
-        raise YahooRateLimited("cooling down after 429")
+    family = _endpoint_family(url)
+    if monotonic() < _rate_limited_until.get(family, 0.0):
+        raise YahooRateLimited(f"{family} cooling down after 429")
     completed = subprocess.run(
         [
             "curl",
@@ -336,7 +347,7 @@ def _get_json(url: str, params: dict[str, str]) -> dict[str, Any]:
     )
     if completed.returncode != 0:
         if "429" in completed.stderr:
-            _rate_limited_until = monotonic() + YAHOO_RATE_LIMIT_COOLDOWN_SECONDS
+            _rate_limited_until[family] = monotonic() + YAHOO_RATE_LIMIT_COOLDOWN_SECONDS
             raise YahooRateLimited(completed.stderr.strip()[:120])
         raise RuntimeError(completed.stderr.strip()[:120] or f"curl exit {completed.returncode}")
     return json.loads(completed.stdout)

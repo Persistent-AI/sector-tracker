@@ -268,7 +268,7 @@ function init() {
   // ~5.7k serverless invocations/day for nothing.
   window.setInterval(() => {
     if (!document.hidden) fetchQuotes();
-  }, 15000);
+  }, 10000);
   window.setInterval(() => {
     if (!document.hidden) fetchCryptoEtfFlows();
   }, 300000);
@@ -458,11 +458,11 @@ function openSocket() {
 }
 
 function updateFeedModeLabel() {
-  feedModeLabel.textContent = feedMode === "ws" ? "WS Live" : "Poll 15s";
+  feedModeLabel.textContent = feedMode === "ws" ? "WS Live" : "Poll 10s";
   feedModeLabel.title =
     feedMode === "ws"
       ? "Streaming over WebSocket"
-      : "Quotes refresh by HTTP poll every 15 seconds";
+      : "Quotes refresh by HTTP poll every 10 seconds";
 }
 
 function applyQuotes(payload) {
@@ -1456,7 +1456,7 @@ function ensureChartLibrary() {
   if (!chartLibPromise) {
     chartLibPromise = new Promise((resolve, reject) => {
       const script = document.createElement("script");
-      script.src = "/static/vendor/lightweight-charts.standalone.production.js?v=20260702-7";
+      script.src = "/static/vendor/lightweight-charts.standalone.production.js?v=20260702-8";
       script.onload = () => resolve();
       script.onerror = () => {
         chartLibPromise = null;

@@ -11,6 +11,6 @@
     "WATCHLIST_PATH": "/tmp/watchlists.yaml",
     "WATCHLIST_SEED_PATH": "./config/watchlists.yaml",
     "ENABLE_BACKGROUND_TASKS": "false",
-    "QUOTE_POLL_SECONDS": "15"
+    "QUOTE_POLL_SECONDS": "10"
   }
 }

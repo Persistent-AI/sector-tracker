@@ -74,6 +74,41 @@ const sourceLabels = {
   finnhub: "FH",
 };
 
+// --- Display timezone ------------------------------------------------------
+// All human-readable times render in Central European Time regardless of the
+// viewer's machine. The IANA zone handles DST, so labels read CET or CEST.
+const DISPLAY_TIME_ZONE = "Europe/Berlin";
+
+const displayDateFmt = new Intl.DateTimeFormat("en-CA", {
+  timeZone: DISPLAY_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+const displayTzOffsetFmt = new Intl.DateTimeFormat("en-US", {
+  timeZone: DISPLAY_TIME_ZONE,
+  timeZoneName: "longOffset",
+});
+const displayTzOffsetCache = new Map();
+
+// Offset of the display zone at `date`, in seconds. Memoized per hour since
+// DST transitions land on hour boundaries; called once per chart bar.
+function displayTzOffsetSeconds(date) {
+  const hourKey = Math.floor(date.getTime() / 3600000);
+  const cached = displayTzOffsetCache.get(hourKey);
+  if (cached !== undefined) return cached;
+  const name =
+    displayTzOffsetFmt.formatToParts(date).find((part) => part.type === "timeZoneName")?.value ||
+    "";
+  const match = name.match(/GMT([+-])(\d{2}):(\d{2})/);
+  const seconds = match
+    ? (match[1] === "-" ? -1 : 1) * (Number(match[2]) * 3600 + Number(match[3]) * 60)
+    : 0;
+  displayTzOffsetCache.set(hourKey, seconds);
+  return seconds;
+}
+
 // --- Market session awareness -------------------------------------------
 // Client-side session clock per exchange. Timezones handled via Intl, so
 // DST is correct without a tz table. Crypto perps trade 24/7.
@@ -1703,9 +1738,17 @@ function chartSubtitleText(symbol, range, interval, rawBars, barCount) {
   const first = new Date(rawBars[0].timestamp);
   const last = new Date(rawBars[rawBars.length - 1].timestamp);
   if (Number.isNaN(first.getTime()) || Number.isNaN(last.getTime())) return base;
-  const dateFmt = new Intl.DateTimeFormat([], { month: "short", day: "numeric" });
-  const timeFmt = new Intl.DateTimeFormat([], { hour: "2-digit", minute: "2-digit" });
-  const sameDay = first.toDateString() === last.toDateString();
+  const dateFmt = new Intl.DateTimeFormat([], {
+    timeZone: DISPLAY_TIME_ZONE,
+    month: "short",
+    day: "numeric",
+  });
+  const timeFmt = new Intl.DateTimeFormat([], {
+    timeZone: DISPLAY_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+  const sameDay = formatLocalDate(first) === formatLocalDate(last);
   const window = sameDay
     ? `${dateFmt.format(last)} ${timeFmt.format(first)}–${timeFmt.format(last)}`
     : `${dateFmt.format(first)} ${timeFmt.format(first)} – ${dateFmt.format(last)} ${timeFmt.format(last)}`;
@@ -2342,7 +2385,11 @@ function formatFlowDate(value) {
   if (!value) return "--";
   const date = new Date(`${value}T00:00:00Z`);
   if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleDateString([], { month: "short", day: "numeric" });
+  return date.toLocaleDateString([], {
+    timeZone: DISPLAY_TIME_ZONE,
+    month: "short",
+    day: "numeric",
+  });
 }
 
 function formatInteger(value) {
@@ -2360,19 +2407,22 @@ function clampNumber(value, min, max) {
 }
 
 function formatClock(date) {
-  return date.toLocaleTimeString([], {
+  const time = date.toLocaleTimeString([], {
+    timeZone: DISPLAY_TIME_ZONE,
     hour: "2-digit",
     minute: "2-digit",
     second: "2-digit",
-    timeZoneName: "short",
   });
+  // Some locales render Europe/Berlin's short name as "GMT+2"; label the
+  // zone explicitly so it always reads CET/CEST.
+  const offset = displayTzOffsetSeconds(date);
+  const zone = offset === 7200 ? "CEST" : offset === 3600 ? "CET" : `GMT+${offset / 3600}`;
+  return `${time} ${zone}`;
 }
 
 function formatLocalDate(date) {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  // en-CA renders YYYY-MM-DD; evaluated in the display zone.
+  return displayDateFmt.format(date);
 }
 
 function displayGroupName(value) {
@@ -2393,8 +2443,8 @@ const DATE_ONLY_INTERVALS = new Set(["1d", "1wk", "1mo"]);
 
 function toChartTime(value, interval) {
   if (DATE_ONLY_INTERVALS.has(interval)) return value.slice(0, 10);
-  // lightweight-charts renders epoch labels in UTC; shift by the local
-  // offset so the axis matches the local times shown in the subtitle.
+  // lightweight-charts renders epoch labels in UTC; shift by the display
+  // zone's offset so the axis matches the CET times in the subtitle.
   const date = new Date(value);
-  return Math.floor(date.getTime() / 1000) - date.getTimezoneOffset() * 60;
+  return Math.floor(date.getTime() / 1000) + displayTzOffsetSeconds(date);
 }

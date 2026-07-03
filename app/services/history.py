@@ -158,8 +158,10 @@ def _range_start(end: datetime, range_: str) -> datetime | None:
         "1w": timedelta(days=7),
         "1mo": timedelta(days=31),
         "3mo": timedelta(days=93),
+        "6mo": timedelta(days=186),
         "1y": timedelta(days=366),
         "5y": timedelta(days=366 * 5),
+        "10y": timedelta(days=366 * 10),
     }.get(range_)
     if delta is None:
         return None

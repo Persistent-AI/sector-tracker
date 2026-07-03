@@ -46,7 +46,7 @@ let watchlistConfig = null;
 let activeSymbol = null;
 let activeAsset = null;
 let activeHistoryContext = null;
-let activeRange = "ytd";
+let activeRange = "1y";
 let activeInterval = "1d";
 let activeDialog = null;
 let lastFocusedElement = null;
@@ -196,7 +196,7 @@ function syncUrlState() {
   if (marketLayout === "flat") params.set("layout", "flat");
   if (activeSymbol) {
     params.set("chart", activeSymbol);
-    if (activeRange !== "ytd") params.set("range", activeRange);
+    if (activeInterval !== "1d") params.set("tf", activeInterval);
   }
   const hash = params.toString();
   const next = hash ? `#${hash}` : window.location.pathname + window.location.search;
@@ -230,7 +230,7 @@ function restoreUrlState() {
     if (chartSymbol) {
       pendingChartFromUrl = {
         symbol: chartSymbol.toUpperCase(),
-        range: params.get("range") || "ytd",
+        interval: params.get("tf") || "1d",
       };
     }
   } finally {
@@ -249,10 +249,10 @@ function findAssetConfig(symbol) {
 
 function openPendingChartFromUrl() {
   if (!pendingChartFromUrl || !latestData) return;
-  const { symbol, range } = pendingChartFromUrl;
+  const { symbol, interval } = pendingChartFromUrl;
   const asset = findAssetConfig(symbol);
   pendingChartFromUrl = null;
-  if (asset) openChart(asset, { range });
+  if (asset) openChart(asset, { interval });
 }
 
 
@@ -344,7 +344,7 @@ function init() {
   });
   intervalButtons.forEach((button) => {
     button.addEventListener("click", () => {
-      activeRange = button.dataset.range || "ytd";
+      activeRange = button.dataset.range || "1y";
       activeInterval = button.dataset.interval || "1d";
       intervalButtons.forEach((item) => item.classList.toggle("active", item === button));
       if (activeSymbol) loadChart(activeSymbol, activeRange, activeInterval);
@@ -1559,13 +1559,13 @@ function openChart(asset, options = {}) {
   activeAsset = asset || null;
   activeHistoryContext = null;
   chartContextLoading = false;
-  const requestedRange = options.range || "ytd";
-  const rangeButton =
-    intervalButtons.find((item) => item.dataset.range === requestedRange) ||
-    intervalButtons.find((item) => item.dataset.range === "ytd");
-  activeRange = rangeButton?.dataset.range || "ytd";
-  activeInterval = rangeButton?.dataset.interval || "1d";
-  intervalButtons.forEach((item) => item.classList.toggle("active", item === rangeButton));
+  const requestedInterval = options.interval || "1d";
+  const timeframeButton =
+    intervalButtons.find((item) => item.dataset.interval === requestedInterval) ||
+    intervalButtons.find((item) => item.dataset.interval === "1d");
+  activeInterval = timeframeButton?.dataset.interval || "1d";
+  activeRange = timeframeButton?.dataset.range || "1y";
+  intervalButtons.forEach((item) => item.classList.toggle("active", item === timeframeButton));
   updateIntradayAvailability(assetType);
   chartTitle.textContent = symbol;
   chartSubtitle.textContent = [name, sourceLabels[provider] || provider].filter(Boolean).join(" / ");
@@ -1682,10 +1682,23 @@ async function loadChart(symbol, range, interval) {
   }
 }
 
-const INTRADAY_INTERVALS = new Set(["1m", "5m", "15m", "1h"]);
+const INTRADAY_INTERVALS = new Set(["1m", "5m", "15m", "30m", "1h", "4h"]);
+
+const TIMEFRAME_LABELS = {
+  "1m": "1m",
+  "5m": "5m",
+  "15m": "15m",
+  "30m": "30m",
+  "1h": "1H",
+  "4h": "4H",
+  "1d": "1D",
+  "1wk": "1W",
+  "1mo": "1M",
+};
 
 function chartSubtitleText(symbol, range, interval, rawBars, barCount) {
-  const base = `${symbol} / ${range.toUpperCase()} / ${interval} / ${barCount} bars`;
+  const timeframe = TIMEFRAME_LABELS[interval] || interval;
+  const base = `${symbol} / ${timeframe} candles / ${barCount} bars`;
   if (!INTRADAY_INTERVALS.has(interval) || !rawBars.length) return base;
   const first = new Date(rawBars[0].timestamp);
   const last = new Date(rawBars[rawBars.length - 1].timestamp);
@@ -1697,7 +1710,11 @@ function chartSubtitleText(symbol, range, interval, rawBars, barCount) {
     ? `${dateFmt.format(last)} ${timeFmt.format(first)}–${timeFmt.format(last)}`
     : `${dateFmt.format(first)} ${timeFmt.format(first)} – ${dateFmt.format(last)} ${timeFmt.format(last)}`;
   const ageMs = Date.now() - last.getTime();
-  const staleNote = ageMs > 2 * 3600 * 1000 ? " · prev session" : "";
+  // The last bucket's open time lags by up to one bar width; only flag
+  // staleness once the gap clearly exceeds the timeframe itself.
+  const barMs =
+    { "1m": 6e4, "5m": 3e5, "15m": 9e5, "30m": 18e5, "1h": 36e5, "4h": 144e5 }[interval] || 36e5;
+  const staleNote = ageMs > Math.max(2 * 3600 * 1000, 3 * barMs) ? " · prev session" : "";
   return `${base} · ${window}${staleNote}`;
 }
 
@@ -2372,7 +2389,7 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-const DATE_ONLY_INTERVALS = new Set(["1d", "1wk"]);
+const DATE_ONLY_INTERVALS = new Set(["1d", "1wk", "1mo"]);
 
 function toChartTime(value, interval) {
   if (DATE_ONLY_INTERVALS.has(interval)) return value.slice(0, 10);

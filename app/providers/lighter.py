@@ -9,6 +9,7 @@ from typing import Any
 import httpx
 
 from app.models import AssetConfig, Bar, Quote
+from app.providers.aggregate import aggregate_bars
 from app.providers.base import QuoteProvider
 
 BASE_URL = "https://mainnet.zklighter.elliot.ai/api/v1"
@@ -77,6 +78,11 @@ class LighterProvider(QuoteProvider):
             bar = _bar_from_candle(asset, raw, interval)
             if bar is not None:
                 bars.append(bar)
+        if interval in {"1wk", "1mo"}:
+            # Lighter has no weekly/monthly resolution; the daily fetch above
+            # (via _normalize_interval) covers its whole history within the
+            # 500-candle cap, so aggregate locally.
+            return aggregate_bars(bars, interval)
         return bars
 
     async def has_market(self, symbol: str) -> bool:
@@ -240,8 +246,7 @@ def _bar_from_candle(asset: AssetConfig, raw: Any, interval: str) -> Bar | None:
 def _normalize_interval(interval: str) -> str:
     if interval in _RESOLUTIONS:
         return interval
-    # 1wk falls back to daily candles: Lighter's history is shallower than
-    # 500 daily bars anyway, so weekly aggregation would waste resolution.
+    # 1wk/1mo fetch daily candles and aggregate locally in get_history.
     return "1d"
 
 
@@ -260,6 +265,7 @@ def _range_to_window(range_: str) -> tuple[datetime, datetime]:
         "6mo": end - timedelta(days=186),
         "1y": end - timedelta(days=366),
         "5y": end - timedelta(days=366 * 5),
+        "10y": end - timedelta(days=366 * 10),
         "ytd": datetime(today.year, 1, 1, tzinfo=UTC),
     }.get(range_, end - timedelta(days=366))
     return start, end

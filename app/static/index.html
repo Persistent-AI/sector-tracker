@@ -10,9 +10,9 @@
       href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
-    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v=20260703-4" />
-    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=20260703-4" />
-    <link rel="stylesheet" href="/static/styles.css?v=20260703-4" />
+    <link rel="icon" type="image/svg+xml" href="/static/favicon.svg?v=20260703-5" />
+    <link rel="apple-touch-icon" href="/static/apple-touch-icon.png?v=20260703-5" />
+    <link rel="stylesheet" href="/static/styles.css?v=20260703-5" />
   </head>
   <body>
     <header class="app-header">
@@ -231,20 +231,18 @@
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
           </button>
         </div>
-        <div class="intervals" role="tablist" aria-label="Chart range">
+        <div class="intervals" role="tablist" aria-label="Chart timeframe">
           <span class="interval-group" aria-hidden="true">Intraday</span>
-          <button type="button" data-range="10m" data-interval="1m" data-intraday>10m</button>
-          <button type="button" data-range="30m" data-interval="1m" data-intraday>30m</button>
-          <button type="button" data-range="1h" data-interval="1m" data-intraday>1h</button>
-          <button type="button" data-range="4h" data-interval="5m" data-intraday>4h</button>
-          <button type="button" data-range="1d" data-interval="5m" data-intraday>1D</button>
+          <button type="button" data-interval="1m" data-range="1d" data-intraday>1m</button>
+          <button type="button" data-interval="5m" data-range="1w" data-intraday>5m</button>
+          <button type="button" data-interval="15m" data-range="1w" data-intraday>15m</button>
+          <button type="button" data-interval="30m" data-range="1mo" data-intraday>30m</button>
+          <button type="button" data-interval="1h" data-range="3mo" data-intraday>1h</button>
+          <button type="button" data-interval="4h" data-range="6mo" data-intraday>4h</button>
           <span class="interval-group" aria-hidden="true">History</span>
-          <button type="button" data-range="1w" data-interval="15m">1W</button>
-          <button type="button" data-range="1mo" data-interval="1h">1Mo</button>
-          <button type="button" data-range="3mo" data-interval="1d">3Mo</button>
-          <button type="button" data-range="ytd" data-interval="1d" class="active">YTD</button>
-          <button type="button" data-range="1y" data-interval="1d">1Y</button>
-          <button type="button" data-range="5y" data-interval="1wk">5Y</button>
+          <button type="button" data-interval="1d" data-range="1y" class="active">1D</button>
+          <button type="button" data-interval="1wk" data-range="5y">1W</button>
+          <button type="button" data-interval="1mo" data-range="10y">1M</button>
         </div>
         <div id="chart-error" class="chart-error" hidden></div>
         <div id="chart" class="chart"></div>
@@ -254,6 +252,6 @@
       </div>
     </div>
 
-    <script src="/static/app.js?v=20260703-4" defer></script>
+    <script src="/static/app.js?v=20260703-5" defer></script>
   </body>
 </html>

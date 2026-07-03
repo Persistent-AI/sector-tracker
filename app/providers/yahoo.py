@@ -15,6 +15,7 @@ from urllib.parse import quote as url_quote
 from urllib.parse import urlencode
 
 from app.models import AssetConfig, Bar, Quote
+from app.providers.aggregate import aggregate_bars
 from app.providers.base import QuoteProvider
 
 YAHOO_SPARK_URLS = (
@@ -144,9 +145,12 @@ def _get_raw_history_sync(asset: AssetConfig, interval: str, range_: str) -> lis
     Uses the same curl transport + query1/query2 retry as quotes; yfinance's
     cookie/crumb scraping gets rate-limited from datacenter IPs (Vercel),
     which made history silently fall back to stale cached bars.
+
+    Yahoo has no 4h resolution, so 4h is aggregated from native 1h bars.
     """
-    yahoo_range = _yahoo_period(range_)
-    bars = _fetch_chart_bars(asset, interval, yahoo_range)
+    fetch_interval = "1h" if interval == "4h" else interval
+    yahoo_range = _yahoo_period(range_, fetch_interval)
+    bars = _fetch_chart_bars(asset, fetch_interval, yahoo_range)
     if not bars:
         # Yahoo anchors range=1d to the CURRENT trading day, so pre-open
         # sessions (e.g. KRX mornings, US pre-market) return zero 1m/5m rows.
@@ -154,7 +158,9 @@ def _get_raw_history_sync(asset: AssetConfig, interval: str, range_: str) -> lis
         # relative to the newest bar, which lands on the last session.
         fallback = INTRADAY_RANGE_FALLBACK.get(yahoo_range)
         if fallback is not None:
-            bars = _fetch_chart_bars(asset, interval, fallback)
+            bars = _fetch_chart_bars(asset, fetch_interval, fallback)
+    if interval == "4h":
+        return aggregate_bars(bars, "4h")
     return bars
 
 
@@ -514,23 +520,32 @@ def _number(value: Any) -> float | None:
     return parsed
 
 
-def _yahoo_period(range_: str) -> str:
-    """Map board ranges to chart-API ranges.
+def _yahoo_period(range_: str, interval: str) -> str:
+    """Map board ranges to chart-API ranges, capped per Yahoo interval limits.
 
-    Daily ranges over-fetch to 2y: the extra bars land in the SQLite cache and
-    feed 200DMA / 52-week metrics on the daily board, and the history service
-    trims the response back to the requested range.
+    Daily requests over-fetch to 2y: the extra bars land in the SQLite cache
+    and feed 200DMA / 52-week metrics on the daily board, and the history
+    service trims the response back to the requested range. Intraday
+    intervals map honestly — Yahoo rejects 1m beyond 7d and 5m/15m/30m
+    beyond 60d.
     """
+    if interval == "1d":
+        return {
+            "1d": "1d",
+            "1w": "5d",
+            "1mo": "1mo",
+        }.get(range_, "2y")
+    if interval in {"1wk", "1mo"}:
+        return {"5y": "5y", "10y": "10y"}.get(range_, "10y")
+    if interval == "1m":
+        return {"1d": "1d", "1w": "5d"}.get(range_, "5d")
+    if interval in {"5m", "15m", "30m"}:
+        return {"1d": "1d", "1w": "5d", "1mo": "1mo"}.get(range_, "1mo")
+    # 1h (also feeds aggregated 4h): Yahoo serves up to ~730 days.
     return {
-        "10m": "1d",
-        "30m": "1d",
-        "1h": "1d",
-        "4h": "1d",
         "1d": "1d",
         "1w": "5d",
         "1mo": "1mo",
-        "3mo": "2y",
-        "ytd": "2y",
-        "1y": "2y",
-        "5y": "5y",
-    }.get(range_, range_)
+        "3mo": "3mo",
+        "6mo": "6mo",
+    }.get(range_, "6mo")

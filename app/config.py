@@ -15,7 +15,9 @@ class Settings(BaseSettings):
 
     finnhub_api_key: str = ""
     database_path: Path = Path("./data/market_board.sqlite3")
-    database_seed_path: Path = Path("./data/market_board.sqlite3")
+    # The repo seed warms daily-board metrics on first boot in any fresh
+    # environment; existing runtime databases are never overwritten.
+    database_seed_path: Path = Path("./config/market_board_seed.sqlite3")
     watchlist_path: Path = Path("./config/watchlists.yaml")
     watchlist_seed_path: Path = Path("./config/watchlists.yaml")
     quote_poll_seconds: int = Field(default=10, ge=5)

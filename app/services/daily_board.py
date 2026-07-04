@@ -4,7 +4,7 @@ from collections.abc import Iterable
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
-from statistics import fmean
+from statistics import fmean, median
 from time import monotonic
 from typing import Any
 
@@ -341,6 +341,31 @@ def _theme_metrics(
     for rank, theme in enumerate(themes, start=1):
         theme["rank"] = rank
     return themes
+
+
+def crypto_breadth_metrics(tape: list[dict[str, object]]) -> dict[str, object]:
+    """Breadth across the full Lighter crypto tape, from quote data alone.
+
+    Deliberately separate from the watchlist universe so 100+ alt perps
+    never distort the curated regime/breadth read.
+    """
+    changes = _numbers(row.get("change_pct") for row in tape)
+    fundings = _numbers(row.get("funding_rate") for row in tape)
+    volumes = _numbers(row.get("day_volume_usd") for row in tape)
+    return {
+        "total": len(tape),
+        "quoted": len(changes),
+        "advancers": sum(value > 0 for value in changes),
+        "decliners": sum(value < 0 for value in changes),
+        "advance_pct": _percent(sum(value > 0 for value in changes), len(changes)),
+        "up_3pct": sum(value >= 3 for value in changes),
+        "down_3pct": sum(value <= -3 for value in changes),
+        "up_10pct": sum(value >= 10 for value in changes),
+        "down_10pct": sum(value <= -10 for value in changes),
+        "median_change": round(median(changes), 4) if changes else None,
+        "volume_usd": round(sum(volumes), 2) if volumes else None,
+        "positive_funding_pct": _percent(sum(value > 0 for value in fundings), len(fundings)),
+    }
 
 
 def _universe_metrics(asset_metrics: dict[str, dict[str, Any]]) -> dict[str, object]:

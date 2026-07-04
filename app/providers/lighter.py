@@ -111,6 +111,41 @@ class LighterProvider(QuoteProvider):
                 prices[symbol.upper()] = last
         return prices
 
+    def is_crypto_market(self, symbol: str) -> bool:
+        """Whether the cached market map classifies `symbol` as a crypto perp."""
+        detail = self._details.get(symbol.upper())
+        return detail is not None and _is_crypto_detail(detail)
+
+    def crypto_tape_cached(self) -> list[dict[str, object]]:
+        """Every crypto perp on Lighter as a quote-tape row, from warm caches.
+
+        Synchronous by design: the board payload builders run after the quote
+        poll has refreshed the details/funding caches, so no HTTP happens
+        here. Cold caches yield an empty tape until the first poll lands.
+        """
+        tape: list[dict[str, object]] = []
+        for symbol, detail in self._details.items():
+            if not _is_crypto_detail(detail):
+                continue
+            last = _number(detail.get("last_trade_price"))
+            if last is None or last <= 0:
+                continue
+            open_interest = _number(detail.get("open_interest"))
+            tape.append(
+                {
+                    "symbol": symbol,
+                    "last": last,
+                    "change_pct": _number(detail.get("daily_price_change")),
+                    "funding_rate": self._funding.get(symbol),
+                    "open_interest_usd": (
+                        round(open_interest * last, 2) if open_interest is not None else None
+                    ),
+                    "day_volume_usd": _number(detail.get("daily_quote_token_volume")),
+                }
+            )
+        tape.sort(key=lambda row: row.get("day_volume_usd") or 0.0, reverse=True)
+        return tape
+
     async def _get_details(self) -> dict[str, dict[str, Any]]:
         if monotonic() - self._details_time < DETAILS_TTL_SECONDS:
             return self._details
@@ -165,6 +200,33 @@ def _parse_details(payload: Any) -> dict[str, dict[str, Any]]:
         if symbol and detail.get("status") == "active":
             parsed[symbol] = detail
     return parsed
+
+
+# Lighter has no explicit asset-class field; strategy_index clusters markets
+# (verified against all 214 live markets): 2 = crypto perps, 3 = commodities,
+# 4 = FX, 5 = US equities/ETFs, 6 = Asia equities, 7 = pre-IPO synthetics.
+# 0 is a legacy bucket mixing early meme coins with a handful of TradFi
+# listings, disambiguated by the exclusion set below.
+_TRADFI_STRATEGY_INDEXES = {3, 4, 5, 6, 7}
+_LEGACY_TRADFI_SYMBOLS = {
+    "DIA",
+    "HANMI",
+    "HYUNDAI",
+    "KRCOMP",
+    "MAGS",
+    "SAMSUNG",
+    "SKHYNIX",
+    "SOXX",
+    "SPACEX",
+}
+
+
+def _is_crypto_detail(detail: dict[str, Any]) -> bool:
+    strategy = detail.get("strategy_index")
+    if isinstance(strategy, int) and strategy in _TRADFI_STRATEGY_INDEXES:
+        return False
+    symbol = str(detail.get("symbol", "")).upper()
+    return symbol not in _LEGACY_TRADFI_SYMBOLS
 
 
 def _parse_funding(payload: Any) -> dict[str, float]:

@@ -6,6 +6,8 @@ from typing import Any
 
 from fastapi import WebSocket
 
+from app.providers.lighter import LighterProvider
+from app.services.daily_board import crypto_breadth_metrics
 from app.services.macro import MACRO_TAPE_GROUP_NAME, macro_payload, with_macro_group
 from app.services.quotes import grouped_quotes_payload
 
@@ -84,8 +86,12 @@ async def _refresh_daily_history(app_state: Any) -> None:
 def _board_payload(app_state: Any, grouped: Any) -> dict[str, object]:
     overview, summaries = app_state.daily_board_service.build_board(app_state.groups, grouped)
     payload = grouped_quotes_payload(app_state.groups, grouped, summaries=summaries)
+    lighter = app_state.providers.get("lighter")
+    tape = lighter.crypto_tape_cached() if isinstance(lighter, LighterProvider) else []
+    overview["crypto_breadth"] = crypto_breadth_metrics(tape)
     payload["overview"] = overview
     payload["macro"] = macro_payload(grouped.get(MACRO_TAPE_GROUP_NAME, []))
+    payload["crypto_tape"] = tape
     return payload
 
 

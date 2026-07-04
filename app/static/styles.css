@@ -477,6 +477,10 @@ h1 {
   grid-template-columns: 1fr 1fr;
 }
 
+.analytics-grid.triple {
+  grid-template-columns: 1.3fr 0.85fr 0.85fr;
+}
+
 .benchmark-grid {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
@@ -925,6 +929,59 @@ h1 {
   font-size: 10px;
   letter-spacing: 0.03em;
   text-transform: uppercase;
+}
+
+.category-tabs {
+  display: flex;
+  align-items: stretch;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.category-tabs button {
+  padding: 6px 14px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.category-tabs button + button {
+  border-left: 1px solid var(--line);
+}
+
+.category-tabs button:hover {
+  color: var(--text);
+}
+
+.category-tabs button.active {
+  background: var(--surface-raised);
+  color: var(--text);
+}
+
+.crypto-tape {
+  max-width: 860px;
+  margin-top: 12px;
+}
+
+.crypto-tape[hidden] {
+  display: none;
+}
+
+.tape-panel .group-title,
+.tape-panel .asset-row {
+  grid-template-columns: minmax(120px, 1fr) 84px 66px 70px 84px 90px;
+}
+
+.tape-panel .tape-funding,
+.tape-panel .tape-oi,
+.tape-panel .tape-volume {
+  color: var(--muted-strong);
+  font-family: var(--font-mono);
 }
 
 .market-search {
@@ -2040,7 +2097,8 @@ h1 {
   }
 
   .analytics-grid,
-  .analytics-grid.equal {
+  .analytics-grid.equal,
+  .analytics-grid.triple {
     grid-template-columns: 1fr;
   }
 

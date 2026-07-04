@@ -36,6 +36,8 @@ class HistoryService:
     ) -> list[Bar]:
         asset = find_asset(groups, symbol)
         if asset is None:
+            asset = await self._tape_asset(symbol)
+        if asset is None:
             return []
         providers_to_try: list[QuoteProvider] = []
         lighter = self.providers.get("lighter")
@@ -72,6 +74,20 @@ class HistoryService:
             return filter_bars_to_range(cached, range_)
         cached_any_provider = db.load_bars(self.database_path, asset.symbol, interval)
         return filter_bars_to_range(cached_any_provider, range_)
+
+    async def _tape_asset(self, symbol: str) -> AssetConfig | None:
+        """Synthetic config for Lighter crypto perps outside the watchlist.
+
+        The Markets crypto tape lists every Lighter perp, so its rows must
+        chart without a YAML entry. Restricted to crypto markets: TradFi
+        synthetics stay chartable only through their configured assets.
+        """
+        lighter = self.providers.get("lighter")
+        if not isinstance(lighter, LighterProvider):
+            return None
+        if not await lighter.has_market(symbol) or not lighter.is_crypto_market(symbol):
+            return None
+        return AssetConfig(symbol=symbol.upper(), type="crypto_perp", source="lighter")
 
     async def refresh_stale_daily_bars(self, groups: list[GroupConfig]) -> None:
         """Opportunistically refresh the stalest daily histories.

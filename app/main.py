@@ -23,7 +23,7 @@ from app.providers.yahoo import YahooProvider
 from app.scheduler import ConnectionManager, history_refresh_loop, quote_poll_loop, stop_task
 from app.services.asset_profile import AssetProfileService
 from app.services.crypto_etf_flows import CryptoEtfFlowService
-from app.services.daily_board import DailyBoardService
+from app.services.daily_board import DailyBoardService, crypto_breadth_metrics
 from app.services.history import HistoryService, bars_payload, find_asset
 from app.services.macro import MACRO_TAPE_GROUP_NAME, macro_payload, with_macro_group
 from app.services.quotes import QuoteService, grouped_quotes_payload
@@ -394,7 +394,11 @@ def board_payload(grouped: dict[str, list[Quote]]) -> dict[str, object]:
         return _board_payload_cache[1]
     overview, summaries = app.state.daily_board_service.build_board(app.state.groups, grouped)
     payload = grouped_quotes_payload(app.state.groups, grouped, summaries=summaries)
+    lighter = app.state.providers.get("lighter")
+    tape = lighter.crypto_tape_cached() if isinstance(lighter, LighterProvider) else []
+    overview["crypto_breadth"] = crypto_breadth_metrics(tape)
     payload["overview"] = overview
     payload["macro"] = macro_payload(grouped.get(MACRO_TAPE_GROUP_NAME, []))
+    payload["crypto_tape"] = tape
     _board_payload_cache = (grouped, payload)
     return payload

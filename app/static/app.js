@@ -14,6 +14,8 @@ const marketSearch = document.querySelector("#market-search");
 const marketFilterClear = document.querySelector("#market-filter-clear");
 const marketLayoutToggle = document.querySelector("#market-layout-toggle");
 const marketFilterStatus = document.querySelector("#market-filter-status");
+const categoryButtons = Array.from(document.querySelectorAll(".category-tabs button"));
+const cryptoTapeElement = document.querySelector("#crypto-tape");
 const modal = document.querySelector("#chart-modal");
 const modalShell = document.querySelector("#chart-modal .modal-shell");
 const modalClose = document.querySelector("#modal-close");
@@ -59,6 +61,9 @@ let marketSearchQuery = "";
 let activeGroupFilter = "";
 let marketSort = { key: "configured", direction: "default" };
 let marketLayout = "grouped"; // "grouped" | "flat"
+let marketCategory = "tradfi"; // "tradfi" | "crypto"
+let tapeSort = { key: "volume", direction: "desc" };
+let lastTapeRenderKey = "";
 let feedMode = "poll"; // "ws" locally, "poll" on serverless deployments
 let activeView = "daily";
 let pendingChartFromUrl = null;
@@ -229,6 +234,7 @@ function syncUrlState() {
   if (activeGroupFilter) params.set("group", activeGroupFilter);
   if (marketSearchQuery) params.set("q", marketSearchQuery);
   if (marketLayout === "flat") params.set("layout", "flat");
+  if (marketCategory !== "tradfi") params.set("cat", marketCategory);
   if (activeSymbol) {
     params.set("chart", activeSymbol);
     if (activeInterval !== "1d") params.set("tf", activeInterval);
@@ -253,6 +259,10 @@ function restoreUrlState() {
     if (query) {
       marketSearchQuery = query;
       marketSearch.value = query;
+    }
+    if (params.get("cat") === "crypto") {
+      marketCategory = "crypto";
+      updateCategoryButtons();
     }
     if (params.get("layout") === "flat") {
       marketLayout = "flat";
@@ -341,6 +351,9 @@ function init() {
   });
   marketFilterClear.addEventListener("click", clearMarketFilters);
   marketLayoutToggle.addEventListener("click", toggleMarketLayout);
+  categoryButtons.forEach((button) => {
+    button.addEventListener("click", () => selectCategory(button.dataset.category || "tradfi"));
+  });
   modalClose.addEventListener("click", closeModal);
   modal.addEventListener("click", (event) => {
     if (event.target === modal) closeModal();
@@ -389,6 +402,27 @@ function init() {
   groupForm.addEventListener("submit", addGroup);
   assetForm.addEventListener("submit", addAsset);
   assetTypeSelect.addEventListener("change", syncSourceToType);
+}
+
+function selectCategory(category) {
+  if (category === marketCategory) return;
+  marketCategory = category;
+  activeGroupFilter = "";
+  updateCategoryButtons();
+  renderBoard(latestData);
+  syncUrlState();
+}
+
+function updateCategoryButtons() {
+  categoryButtons.forEach((button) => {
+    const active = (button.dataset.category || "tradfi") === marketCategory;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
+  });
+}
+
+function groupCategory(group) {
+  return (group.assets || []).some((asset) => isCryptoAsset(asset.type)) ? "crypto" : "tradfi";
 }
 
 function selectView(view) {
@@ -667,7 +701,7 @@ function renderDailyBoard(overview, cryptoEtfFlows) {
       </div>
     </section>
 
-    <div class="analytics-grid">
+    <div class="analytics-grid triple">
       <section class="analytics-panel">
         ${panelHeading(
           "Benchmarks",
@@ -697,6 +731,8 @@ function renderDailyBoard(overview, cryptoEtfFlows) {
           ${breadthRow("Down 3%+", formatInteger(universe.down_3pct), "negative")}
         </div>
       </section>
+
+      ${cryptoBreadthPanel(overview.crypto_breadth)}
     </div>
 
     <div class="analytics-grid equal">
@@ -815,6 +851,35 @@ function metricLine(label, value, tone, tip = "") {
 
 function breadthRow(label, value, tone = "") {
   return `<div class="breadth-row"><span>${escapeHtml(label)}</span><strong class="${tone ? `tone-${tone}` : ""}">${escapeHtml(value)}</strong></div>`;
+}
+
+function cryptoBreadthPanel(breadth) {
+  const cb = breadth || {};
+  const medianTone =
+    typeof cb.median_change === "number"
+      ? cb.median_change > 0
+        ? "positive"
+        : cb.median_change < 0
+          ? "negative"
+          : ""
+      : "";
+  return `<section class="analytics-panel">
+    ${panelHeading(
+      "Crypto Breadth",
+      `${formatInteger(cb.total)} Lighter perps`,
+      "Advance/decline, big movers, and funding across every crypto perp on Lighter. Quote-based and separate from the curated universe above"
+    )}
+    <div class="breadth-grid">
+      ${breadthRow("Median 1D", formatSignedPct(cb.median_change), medianTone)}
+      ${breadthRow("Advance %", formatPlainPct(cb.advance_pct))}
+      ${breadthRow("Up 3%+", formatInteger(cb.up_3pct), "positive")}
+      ${breadthRow("Down 3%+", formatInteger(cb.down_3pct), "negative")}
+      ${breadthRow("Up 10%+", formatInteger(cb.up_10pct), "positive")}
+      ${breadthRow("Down 10%+", formatInteger(cb.down_10pct), "negative")}
+      ${breadthRow("24h volume", typeof cb.volume_usd === "number" ? `$${formatCompactPrice(cb.volume_usd)}` : "--")}
+      ${breadthRow("Funding > 0", formatPlainPct(cb.positive_funding_pct))}
+    </div>
+  </section>`;
 }
 
 function breadthTrendRow() {
@@ -990,19 +1055,28 @@ function cryptoEtfFlowError(error) {
 
 function renderBoard(payload) {
   if (!payload) return;
-  const groups = marketLayout === "flat" ? flatGroups(payload.groups || []) : visibleGroups(payload.groups || []);
+  const categoryGroups = (payload.groups || []).filter(
+    (group) => groupCategory(group) === marketCategory
+  );
+  const groups = marketLayout === "flat" ? flatGroups(categoryGroups) : visibleGroups(categoryGroups);
   board.classList.remove("board-loading");
   board.classList.toggle("flat", marketLayout === "flat");
+  const showTape = marketCategory === "crypto";
+  cryptoTapeElement.hidden = !showTape;
+  const tapeCounts = showTape ? renderCryptoTape(payload.crypto_tape || []) : { visible: 0, total: 0 };
   if (!groups.length) {
-    const totalAssets = countAssets(payload.groups || []);
+    const totalAssets = countAssets(categoryGroups) + tapeCounts.total;
     const hasFilter = activeGroupFilter || marketSearchQuery;
-    board.innerHTML = `<div class="empty-state">${hasFilter ? "No matching markets" : "No groups configured"}</div>`;
-    updateMarketFilterStatus(0, totalAssets);
+    board.innerHTML =
+      tapeCounts.visible > 0
+        ? ""
+        : `<div class="empty-state">${hasFilter ? "No matching markets" : "No groups configured"}</div>`;
+    updateMarketFilterStatus(tapeCounts.visible, totalAssets);
     return;
   }
 
-  const totalAssets = countAssets(payload.groups || []);
-  const visibleAssets = countAssets(groups);
+  const totalAssets = countAssets(categoryGroups) + tapeCounts.total;
+  const visibleAssets = countAssets(groups) + tapeCounts.visible;
   const nextGroups = new Set(groups.map((group) => group.name));
 
   groups.forEach((group) => {
@@ -1032,6 +1106,141 @@ function renderBoard(payload) {
   });
   updateSortHeaders();
   updateMarketFilterStatus(visibleAssets, totalAssets);
+}
+
+// --- Crypto tape -----------------------------------------------------------
+// Every crypto perp on Lighter, auto-synced from the exchange: no YAML entry
+// needed, new listings appear on their own. Rows are quote-only (funding, OI,
+// 24h volume); clicking one opens the chart via on-demand Lighter candles.
+const TAPE_SORT_KEYS = {
+  symbol: (row) => row.symbol,
+  last: (row) => numericOrNull(row.last),
+  pct: (row) => numericOrNull(row.change_pct),
+  funding: (row) => numericOrNull(row.funding_rate),
+  oi: (row) => numericOrNull(row.open_interest_usd),
+  volume: (row) => numericOrNull(row.day_volume_usd),
+};
+
+function renderCryptoTape(tape) {
+  const configured = new Set();
+  (latestData?.groups || []).forEach((group) => {
+    if (groupCategory(group) === "crypto") {
+      (group.assets || []).forEach((asset) => configured.add(asset.symbol));
+    }
+  });
+  const rows = tape.filter((row) => !configured.has(row.symbol));
+  const query = marketSearchQuery.toLowerCase();
+  const visible = query
+    ? rows.filter((row) => row.symbol.toLowerCase().includes(query))
+    : rows;
+  const counts = { visible: visible.length, total: rows.length };
+
+  const renderKey = JSON.stringify([tape, tapeSort, query, configured.size]);
+  if (renderKey === lastTapeRenderKey) return counts;
+  lastTapeRenderKey = renderKey;
+
+  if (!visible.length) {
+    cryptoTapeElement.innerHTML = rows.length
+      ? '<div class="empty-state">No matching perps</div>'
+      : "";
+    return counts;
+  }
+
+  const sorted = sortedTapeRows(visible);
+  cryptoTapeElement.innerHTML = `
+    <section class="group-panel tape-panel">
+      <div class="group-title">
+        <span>${tapeHeaderButton("Lighter Perps", "symbol")}<em class="session-chip" data-state="open" title="Perps trade around the clock; list auto-syncs with Lighter listings">24/7 · ${rows.length}</em></span>
+        <span>${tapeHeaderButton("Last", "last")}</span>
+        <span>${tapeHeaderButton("1D %", "pct")}</span>
+        <span>${tapeHeaderButton("Fund", "funding")}</span>
+        <span>${tapeHeaderButton("OI", "oi")}</span>
+        <span>${tapeHeaderButton("24h Vol", "volume")}</span>
+      </div>
+      ${sorted.map(tapeRowMarkup).join("")}
+    </section>
+  `;
+  cryptoTapeElement.querySelectorAll(".group-title button").forEach((button) => {
+    button.classList.toggle("active-sort", button.dataset.sortKey === tapeSort.key);
+    button.setAttribute(
+      "aria-sort",
+      button.dataset.sortKey === tapeSort.key
+        ? tapeSort.direction === "asc"
+          ? "ascending"
+          : "descending"
+        : "none"
+    );
+    button.addEventListener("click", () => setTapeSort(button.dataset.sortKey || "volume"));
+  });
+  cryptoTapeElement.querySelectorAll(".asset-row").forEach((row) => {
+    row.addEventListener("click", () => openTapeChart(row.dataset.symbol || ""));
+  });
+  return counts;
+}
+
+function tapeHeaderButton(label, sortKey) {
+  return `<button type="button" data-sort-key="${sortKey}" title="Sort by ${escapeHtml(label)}">${escapeHtml(label)}</button>`;
+}
+
+function setTapeSort(sortKey) {
+  tapeSort =
+    tapeSort.key === sortKey
+      ? { key: sortKey, direction: tapeSort.direction === "asc" ? "desc" : "asc" }
+      : { key: sortKey, direction: sortKey === "symbol" ? "asc" : "desc" };
+  renderBoard(latestData);
+}
+
+function sortedTapeRows(rows) {
+  const accessor = TAPE_SORT_KEYS[tapeSort.key] || TAPE_SORT_KEYS.volume;
+  const direction = tapeSort.direction === "asc" ? 1 : -1;
+  return [...rows].sort((a, b) => {
+    const aValue = accessor(a);
+    const bValue = accessor(b);
+    if (typeof aValue === "string" || typeof bValue === "string") {
+      return String(aValue).localeCompare(String(bValue)) * direction;
+    }
+    if (aValue === bValue) return a.symbol.localeCompare(b.symbol);
+    if (aValue === null) return 1;
+    if (bValue === null) return -1;
+    return (aValue - bValue) * direction;
+  });
+}
+
+function tapeRowMarkup(row) {
+  const apr =
+    typeof row.funding_rate === "number" ? row.funding_rate * 24 * 365 * 100 : null;
+  const aprText = apr === null ? "--" : `${apr >= 0 ? "+" : ""}${apr.toFixed(1)}%`;
+  const aprClass = apr === null ? "" : apr >= 20 ? "tone-negative" : apr < 0 ? "tone-positive" : "";
+  return `<button type="button" class="asset-row" data-symbol="${escapeHtml(row.symbol)}" aria-label="${escapeHtml(row.symbol)} chart">
+    <span class="symbol-cell"><strong>${escapeHtml(row.symbol)}</strong></span>
+    <span class="last-cell" title="Last trade">${escapeHtml(formatPrice(row.last))}</span>
+    <span class="${changeClass(row.change_pct)}">${escapeHtml(formatSignedPct(row.change_pct))}</span>
+    <span class="tape-funding ${aprClass}" title="Funding, annualized">${escapeHtml(aprText)}</span>
+    <span class="tape-oi" title="Open interest">${row.open_interest_usd ? `$${escapeHtml(formatCompactPrice(row.open_interest_usd))}` : "--"}</span>
+    <span class="tape-volume" title="24h notional volume">${row.day_volume_usd ? `$${escapeHtml(formatCompactPrice(row.day_volume_usd))}` : "--"}</span>
+  </button>`;
+}
+
+function openTapeChart(symbol) {
+  if (!symbol) return;
+  const row = (latestData?.crypto_tape || []).find((entry) => entry.symbol === symbol);
+  const last = numericOrNull(row?.last);
+  const changePct = numericOrNull(row?.change_pct);
+  openChart({
+    symbol,
+    type: "crypto_perp",
+    quote: {
+      provider: "lighter",
+      last,
+      change_pct: changePct,
+      previous_close:
+        last !== null && changePct !== null && changePct > -100
+          ? last / (1 + changePct / 100)
+          : null,
+      funding_rate: row?.funding_rate ?? null,
+      open_interest_usd: row?.open_interest_usd ?? null,
+    },
+  });
 }
 
 function toggleMarketLayout() {
@@ -1580,6 +1789,11 @@ function filterMarketsByGroup(groupName) {
   activeGroupFilter = groupName;
   marketSearchQuery = "";
   marketSearch.value = "";
+  const target = (latestData?.groups || []).find((group) => group.name === groupName);
+  if (target) {
+    marketCategory = groupCategory(target);
+    updateCategoryButtons();
+  }
   selectView("markets");
   renderBoard(latestData);
   syncUrlState();

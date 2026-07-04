@@ -6,8 +6,13 @@ The app runs a FastAPI backend with a static dashboard frontend. The Daily Board
 regime, breadth, benchmark, theme-strength, five-day rotation metrics, and BTC/ETH/SOL spot
 ETF flow reads from live quotes and cached daily history. A macro tape (VIX, DXY, US 10Y)
 rides above both views, VIX feeds a volatility read in the regime panel, and the Markets view
-keeps the full clickable watchlist grid with an RVOL (volume vs 20-day average) column and
-chart workflow. Crypto perp rows carry Lighter funding and open-interest reads.
+splits into TradFi and Crypto categories. TradFi keeps the clickable watchlist grid with an
+RVOL (volume vs 20-day average) column and chart workflow; Crypto shows the curated perp
+watchlist plus an auto-synced tape of every crypto perp listed on Lighter (~110 markets,
+sortable by 24h volume, funding, and OI) — new listings appear without config changes, and
+every tape row charts on click. A Crypto Breadth panel on the Daily Board reads
+advance/decline, big movers, and funding share across the full tape while the curated
+regime/breadth universe stays unpolluted.
 
 Market data blends two worlds. Lighter DEX drives crypto perps end to end (quotes, candles,
 funding, OI) and overlays live 24/7 prices onto the ~34 equities/ETFs it lists as synthetic

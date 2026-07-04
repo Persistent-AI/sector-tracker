@@ -964,7 +964,10 @@ h1 {
 }
 
 .crypto-tape {
-  max-width: 860px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
+  gap: 12px;
+  align-items: start;
   margin-top: 12px;
 }
 

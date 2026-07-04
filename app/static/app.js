@@ -1121,6 +1121,9 @@ const TAPE_SORT_KEYS = {
   volume: (row) => numericOrNull(row.day_volume_usd),
 };
 
+// Panel order mirrors Lighter's app baskets; "Other" catches untagged tails.
+const TAPE_BASKET_ORDER = ["L1", "DeFi", "AI", "L2", "Memes", "Other"];
+
 function renderCryptoTape(tape) {
   const configured = new Set();
   (latestData?.groups || []).forEach((group) => {
@@ -1131,7 +1134,7 @@ function renderCryptoTape(tape) {
   const rows = tape.filter((row) => !configured.has(row.symbol));
   const query = marketSearchQuery.toLowerCase();
   const visible = query
-    ? rows.filter((row) => row.symbol.toLowerCase().includes(query))
+    ? rows.filter((row) => matchesTapeQuery(row, query))
     : rows;
   const counts = { visible: visible.length, total: rows.length };
 
@@ -1146,20 +1149,15 @@ function renderCryptoTape(tape) {
     return counts;
   }
 
-  const sorted = sortedTapeRows(visible);
-  cryptoTapeElement.innerHTML = `
-    <section class="group-panel tape-panel">
-      <div class="group-title">
-        <span>${tapeHeaderButton("Lighter Perps", "symbol")}<em class="session-chip" data-state="open" title="Perps trade around the clock; list auto-syncs with Lighter listings">24/7 · ${rows.length}</em></span>
-        <span>${tapeHeaderButton("Last", "last")}</span>
-        <span>${tapeHeaderButton("1D %", "pct")}</span>
-        <span>${tapeHeaderButton("Fund", "funding")}</span>
-        <span>${tapeHeaderButton("OI", "oi")}</span>
-        <span>${tapeHeaderButton("24h Vol", "volume")}</span>
-      </div>
-      ${sorted.map(tapeRowMarkup).join("")}
-    </section>
-  `;
+  const baskets = new Map();
+  visible.forEach((row) => {
+    const basket = TAPE_BASKET_ORDER.includes(row.basket) ? row.basket : "Other";
+    if (!baskets.has(basket)) baskets.set(basket, []);
+    baskets.get(basket).push(row);
+  });
+  cryptoTapeElement.innerHTML = TAPE_BASKET_ORDER.filter((basket) => baskets.has(basket))
+    .map((basket) => tapeBasketMarkup(basket, sortedTapeRows(baskets.get(basket))))
+    .join("");
   cryptoTapeElement.querySelectorAll(".group-title button").forEach((button) => {
     button.classList.toggle("active-sort", button.dataset.sortKey === tapeSort.key);
     button.setAttribute(
@@ -1176,6 +1174,27 @@ function renderCryptoTape(tape) {
     row.addEventListener("click", () => openTapeChart(row.dataset.symbol || ""));
   });
   return counts;
+}
+
+function matchesTapeQuery(row, query) {
+  return (
+    row.symbol.toLowerCase().includes(query) ||
+    String(row.basket || "").toLowerCase().includes(query)
+  );
+}
+
+function tapeBasketMarkup(basket, rows) {
+  return `<section class="group-panel tape-panel" data-basket="${escapeHtml(basket)}">
+    <div class="group-title">
+      <span>${tapeHeaderButton(basket, "symbol")}<em class="session-chip" data-state="open" title="${rows.length} perps · Lighter basket · trades 24/7">${rows.length}</em></span>
+      <span>${tapeHeaderButton("Last", "last")}</span>
+      <span>${tapeHeaderButton("1D %", "pct")}</span>
+      <span>${tapeHeaderButton("Fund", "funding")}</span>
+      <span>${tapeHeaderButton("OI", "oi")}</span>
+      <span>${tapeHeaderButton("24h Vol", "volume")}</span>
+    </div>
+    ${rows.map(tapeRowMarkup).join("")}
+  </section>`;
 }
 
 function tapeHeaderButton(label, sortKey) {

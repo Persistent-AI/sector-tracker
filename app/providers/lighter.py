@@ -19,6 +19,9 @@ BASE_URL = "https://mainnet.zklighter.elliot.ai/api/v1"
 # hourly; refresh them far less often than quotes.
 DETAILS_TTL_SECONDS = 8.0
 FUNDING_TTL_SECONDS = 300.0
+# Basket tags come from /tokenlist and change only when Lighter recategorizes
+# a listing.
+CATEGORY_TTL_SECONDS = 3600.0
 RATE_LIMIT_COOLDOWN_SECONDS = 60.0
 
 # Lighter caps candles at 500 per call.
@@ -35,6 +38,8 @@ class LighterProvider(QuoteProvider):
         self._details_time = 0.0
         self._funding: dict[str, float] = {}
         self._funding_time = 0.0
+        self._categories: dict[str, list[str]] = {}
+        self._categories_time = 0.0
         self._cooldown_until = 0.0
         self._details_lock = asyncio.Lock()
 
@@ -46,6 +51,9 @@ class LighterProvider(QuoteProvider):
             return []
         wants_funding = any(asset.type == "crypto_perp" for asset in assets)
         funding = await self._get_funding() if wants_funding else {}
+        if wants_funding:
+            # Keep basket tags warm for the synchronous crypto tape build.
+            await self._get_categories()
         now = datetime.now(UTC)
         quotes: list[Quote] = []
         for asset in assets:
@@ -134,6 +142,7 @@ class LighterProvider(QuoteProvider):
             tape.append(
                 {
                     "symbol": symbol,
+                    "basket": _basket(symbol, self._categories.get(symbol)),
                     "last": last,
                     "change_pct": _number(detail.get("daily_price_change")),
                     "funding_rate": self._funding.get(symbol),
@@ -168,6 +177,16 @@ class LighterProvider(QuoteProvider):
             self._funding = parsed
             self._funding_time = monotonic()
         return self._funding
+
+    async def _get_categories(self) -> dict[str, list[str]]:
+        if monotonic() - self._categories_time < CATEGORY_TTL_SECONDS:
+            return self._categories
+        payload = await self._get_json("/tokenlist", {})
+        parsed = _parse_categories(payload)
+        if parsed:
+            self._categories = parsed
+            self._categories_time = monotonic()
+        return self._categories
 
     async def _get_json(self, path: str, params: dict[str, Any]) -> Any:
         if monotonic() < self._cooldown_until:
@@ -250,6 +269,46 @@ def _parse_funding(payload: Any) -> dict[str, float]:
         if symbol and rate is not None:
             parsed[symbol] = rate / 8.0
     return parsed
+
+
+def _parse_categories(payload: Any) -> dict[str, list[str]]:
+    """Lighter's own basket tags per crypto token from /tokenlist."""
+    if not isinstance(payload, dict):
+        return {}
+    tokens = payload.get("tokens")
+    if not isinstance(tokens, list):
+        return {}
+    parsed: dict[str, list[str]] = {}
+    for token in tokens:
+        if not isinstance(token, dict) or token.get("asset_type") != "CRYPTO":
+            continue
+        symbol = str(token.get("symbol", "")).upper()
+        categories = token.get("categories")
+        if symbol and isinstance(categories, list):
+            parsed[symbol] = [str(category).upper() for category in categories]
+    return parsed
+
+
+# Mirror Lighter's app baskets. Multi-tagged tokens (e.g. CHIP = DEFI + AI)
+# land in the most specific basket, so the priority runs narrow to broad.
+_BASKET_PRIORITY = (
+    ("MEMES", "Memes"),
+    ("AI", "AI"),
+    ("LAYER_2", "L2"),
+    ("LAYER_1", "L1"),
+    ("DEFI", "DeFi"),
+)
+
+
+def _basket(symbol: str, categories: list[str] | None) -> str:
+    tags = set(categories or [])
+    for tag, basket in _BASKET_PRIORITY:
+        if tag in tags:
+            return basket
+    # Lighter leaves its 1000x-wrapped meme listings untagged.
+    if symbol.startswith("1000"):
+        return "Memes"
+    return "Other"
 
 
 def _quote_from_detail(

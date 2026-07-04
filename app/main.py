@@ -1,12 +1,21 @@
 from __future__ import annotations
 
 import asyncio
+import secrets
 import shutil
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi import (
+    Depends,
+    FastAPI,
+    Header,
+    HTTPException,
+    Query,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -162,7 +171,23 @@ def groups() -> dict[str, object]:
     return groups_payload(app.state.groups)
 
 
-@app.post("/api/groups")
+def require_edit_token(
+    x_edit_token: str | None = Header(default=None, alias="X-Edit-Token"),
+) -> None:
+    """Gate watchlist mutations when EDIT_TOKEN is configured.
+
+    Read endpoints stay public so the board can be shared; without a token
+    anyone with the URL could edit or wipe the persisted watchlists. An
+    empty EDIT_TOKEN keeps the open behavior for local development.
+    """
+    token = app.state.settings.edit_token
+    if not token:
+        return
+    if not x_edit_token or not secrets.compare_digest(x_edit_token, token):
+        raise HTTPException(status_code=401, detail="edit_token_required")
+
+
+@app.post("/api/groups", dependencies=[Depends(require_edit_token)])
 async def create_group(request: GroupRequest) -> dict[str, object]:
     async with app.state.watchlist_lock:
         groups_current = load_watchlists(app.state.settings.watchlist_path)
@@ -175,7 +200,7 @@ async def create_group(request: GroupRequest) -> dict[str, object]:
     return groups_payload(app.state.groups)
 
 
-@app.delete("/api/groups/{group_name}")
+@app.delete("/api/groups/{group_name}", dependencies=[Depends(require_edit_token)])
 async def delete_group(group_name: str) -> dict[str, object]:
     async with app.state.watchlist_lock:
         groups_current = load_watchlists(app.state.settings.watchlist_path)
@@ -188,7 +213,7 @@ async def delete_group(group_name: str) -> dict[str, object]:
     return groups_payload(app.state.groups)
 
 
-@app.post("/api/groups/{group_name}/assets")
+@app.post("/api/groups/{group_name}/assets", dependencies=[Depends(require_edit_token)])
 async def create_asset(group_name: str, request: AssetRequest) -> dict[str, object]:
     symbol = clean_symbol(request.symbol)
     asset = AssetConfig(
@@ -236,7 +261,9 @@ async def validate_symbol_exists(asset: AssetConfig) -> None:
         raise HTTPException(status_code=422, detail="symbol_not_found")
 
 
-@app.delete("/api/groups/{group_name}/assets/{symbol}")
+@app.delete(
+    "/api/groups/{group_name}/assets/{symbol}", dependencies=[Depends(require_edit_token)]
+)
 async def delete_asset(group_name: str, symbol: str) -> dict[str, object]:
     async with app.state.watchlist_lock:
         groups_current = load_watchlists(app.state.settings.watchlist_path)
@@ -354,7 +381,8 @@ def yahoo_status() -> dict[str, object]:
             YAHOO_SPARK_URLS[0],
             {"symbols": "SPY", "interval": "1d", "range": "1d"},
         )
-        result["spark"] = "ok" if isinstance(payload, dict) and payload.get("spark") else "unexpected_payload"
+        healthy = isinstance(payload, dict) and payload.get("spark")
+        result["spark"] = "ok" if healthy else "unexpected_payload"
     except Exception as exc:
         result["spark_error"] = str(exc)[:300] or type(exc).__name__
     return result

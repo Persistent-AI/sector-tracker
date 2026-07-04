@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     finnhub_api_key: str = ""
+    # When set, watchlist create/delete endpoints require the X-Edit-Token
+    # header; leave empty for open local development.
+    edit_token: str = ""
     database_path: Path = Path("./data/market_board.sqlite3")
     # The repo seed warms daily-board metrics on first boot in any fresh
     # environment; existing runtime databases are never overwritten.

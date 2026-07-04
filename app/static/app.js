@@ -1679,16 +1679,38 @@ const EDITOR_ERROR_COPY = {
   asset_already_exists: "That symbol is already in this group",
   group_not_found: "Group no longer exists — reload the editor",
   group_already_exists: "A group with that name already exists",
+  edit_token_required: "Wrong or missing edit token — watchlists are read-only",
 };
 
 function editorErrorCopy(detail) {
   return EDITOR_ERROR_COPY[detail] || detail || "Save failed";
 }
 
+const EDIT_TOKEN_KEY = "board-edit-token";
+
 async function mutateWatchlists(url, options) {
   setEditorStatus("Saving");
-  const response = await fetch(url, { headers: { "Content-Type": "application/json" }, ...options });
+  const send = () =>
+    fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(localStorage.getItem(EDIT_TOKEN_KEY)
+          ? { "X-Edit-Token": localStorage.getItem(EDIT_TOKEN_KEY) }
+          : {}),
+      },
+    });
+  let response = await send();
+  if (response.status === 401) {
+    // The server has an EDIT_TOKEN configured; ask once and retry.
+    const token = window.prompt("This board is protected. Enter the edit token:");
+    if (token) {
+      localStorage.setItem(EDIT_TOKEN_KEY, token.trim());
+      response = await send();
+    }
+  }
   if (!response.ok) {
+    if (response.status === 401) localStorage.removeItem(EDIT_TOKEN_KEY);
     const payload = await response.json().catch(() => ({}));
     setEditorStatus(editorErrorCopy(payload.detail));
     return;

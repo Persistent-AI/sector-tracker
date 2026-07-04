@@ -102,9 +102,18 @@ journalctl -u sector-tracker -f          # logs
 systemctl restart sector-tracker         # manual restart
 ```
 
-The board listens on all interfaces without authentication. For a private setup, either
-install [Tailscale](https://tailscale.com) on the VPS and your devices (then firewall
-port 8787 to the tailnet), or front it with Caddy/basic-auth.
+Viewing is public by design; watchlist edits should be locked before sharing the URL.
+Set `EDIT_TOKEN` and the create/delete endpoints require it — the editor prompts for
+the token once per browser and remembers it:
+
+```bash
+echo 'EDIT_TOKEN=pick-something-long' >> /opt/sector-tracker/.env
+systemctl restart sector-tracker
+```
+
+For a fully private board, install [Tailscale](https://tailscale.com) on the VPS and
+your devices (then firewall port 8787 to the tailnet), or front it with Caddy for
+HTTPS + basic auth.
 
 ### Vercel
 

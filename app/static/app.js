@@ -506,7 +506,9 @@ async function fetchQuotes() {
 }
 
 function shouldUseWebSocket() {
-  return ["127.0.0.1", "localhost", "::1"].includes(window.location.hostname);
+  // Serverless (Vercel) can't hold sockets; every long-lived host can.
+  // On Railway/VPS the board streams over WS instead of 10s polling.
+  return !window.location.hostname.endsWith(".vercel.app");
 }
 
 function openSocket() {

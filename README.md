@@ -78,6 +78,33 @@ curl http://127.0.0.1:8000/api/snapshots
 
 ## Deployment
 
+### Railway (recommended)
+
+Railway runs the app as one long-lived process with a persistent volume, which is what
+this architecture wants: warm caches (no funding flicker), background quote/history
+loops, live WebSocket streaming, accruing daily snapshots, durable watchlist edits, and
+a dedicated rate-limit budget for Lighter/Yahoo. Deploys automatically on every push to
+`main` via `Procfile` + `railway.json`.
+
+One-time setup (~3 minutes):
+
+1. [railway.com](https://railway.com) → Login with GitHub → **New Project → Deploy from
+   GitHub repo** → pick this repo. It builds and deploys automatically.
+2. Service → **Settings → Volumes → Add volume**, mount path `/data`.
+3. Service → **Variables → Raw editor**, paste:
+
+   ```bash
+   DATABASE_PATH=/data/market_board.sqlite3
+   DATABASE_SEED_PATH=./config/market_board_seed.sqlite3
+   WATCHLIST_PATH=/data/watchlists.yaml
+   WATCHLIST_SEED_PATH=./config/watchlists.yaml
+   ```
+
+4. Service → **Settings → Networking → Generate Domain** for the public URL.
+
+The first boot copies the SQLite/watchlist seeds into `/data`; everything after that
+persists across deploys and restarts.
+
 ### Vercel
 
 This repo includes `api/index.py`, `requirements.txt`, and `vercel.json` for Vercel.

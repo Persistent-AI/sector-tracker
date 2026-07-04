@@ -51,10 +51,17 @@ class LighterProvider(QuoteProvider):
     async def get_quotes(self, assets: list[AssetConfig]) -> list[Quote]:
         if not assets:
             return []
+        wants_funding = any(asset.type == "crypto_perp" for asset in assets)
+        if wants_funding and not self._funding:
+            # Starvation guard: on shared serverless egress IPs the per-IP
+            # budget can run out mid-cycle, and cold instances always spend
+            # their first request on orderBookDetails — so /funding-rates
+            # systematically loses. When funding has never landed, fetch it
+            # first; prices tolerate one details cycle served from cache.
+            await self._get_funding()
         details = await self._get_details()
         if not details:
             return []
-        wants_funding = any(asset.type == "crypto_perp" for asset in assets)
         funding = await self._get_funding() if wants_funding else {}
         if wants_funding:
             # Keep basket tags warm for the synchronous crypto tape build.
@@ -69,6 +76,28 @@ class LighterProvider(QuoteProvider):
             if quote is not None:
                 quotes.append(quote)
         return quotes
+
+    def status(self) -> dict[str, object]:
+        """Cache freshness and cooldowns, for the diagnostics endpoint."""
+        now = monotonic()
+
+        def age(stamp: float) -> float | None:
+            return round(now - stamp, 1) if stamp > 0 else None
+
+        return {
+            "details": {"symbols": len(self._details), "age_seconds": age(self._details_time)},
+            "funding": {"symbols": len(self._funding), "age_seconds": age(self._funding_time)},
+            "categories": {
+                "symbols": len(self._categories),
+                "age_seconds": age(self._categories_time),
+                "live": self._categories_time > 0,
+            },
+            "cooldowns_seconds": {
+                path: round(until - now, 1)
+                for path, until in self._cooldown_until.items()
+                if until > now
+            },
+        }
 
     async def get_history(self, asset: AssetConfig, *, interval: str, range_: str) -> list[Bar]:
         market_id = await self.market_id(asset.symbol)

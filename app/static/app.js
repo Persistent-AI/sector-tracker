@@ -195,7 +195,9 @@ const SESSION_STATE_COPY = {
 function groupSessionChip(assets) {
   const keys = [...new Set((assets || []).map(assetSessionKey))];
   if (!keys.length) return null;
-  if (keys.every((key) => key === "crypto")) return { text: "24/7", state: "open", title: "Crypto trades around the clock" };
+  // All-crypto groups (Majors) get no session chip: 24/7 is the default
+  // state for perps and the label was just noise.
+  if (keys.every((key) => key === "crypto")) return null;
   const states = keys
     .filter((key) => key !== "crypto")
     .map(sessionState)

@@ -324,6 +324,20 @@ async def crypto_etf_flows() -> dict[str, object]:
     return await app.state.crypto_etf_flow_service.get_flows()
 
 
+@app.get("/api/lighter-status")
+def lighter_status() -> dict[str, object]:
+    """Lighter feed diagnostics: cache freshness and active 429 cooldowns.
+
+    Serverless deployments share egress IPs with other tenants, so secondary
+    feeds (funding, tokenlist) can starve while quotes keep flowing; this
+    shows which feed is failing on the running instance.
+    """
+    lighter = app.state.providers.get("lighter")
+    if not isinstance(lighter, LighterProvider):
+        return {"status": "unavailable"}
+    return {"status": "ok", **lighter.status()}
+
+
 @app.get("/api/snapshots")
 async def snapshots(days: int = Query(default=30, ge=1, le=365)) -> dict[str, object]:
     """Persisted daily-board history: regime, breadth, and theme scores by date."""

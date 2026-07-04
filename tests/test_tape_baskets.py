@@ -273,7 +273,11 @@ async def test_perp_quotes_refresh_categories_for_the_tape(
                     }
                 ]
             },
-            "/funding-rates": {"funding_rates": []},
+            "/funding-rates": {
+                "funding_rates": [
+                    {"market_id": 1, "exchange": "lighter", "symbol": "BTC", "rate": 9.6e-05}
+                ]
+            },
             "/tokenlist": {
                 "tokens": [
                     {"symbol": "BTC", "asset_type": "CRYPTO", "categories": ["LAYER_1"]}

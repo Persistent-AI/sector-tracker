@@ -914,6 +914,10 @@ h1 {
   columns: 390px;
 }
 
+.board.board-crypto {
+  columns: 500px;
+}
+
 .board.flat {
   columns: auto;
   max-width: 860px;
@@ -963,12 +967,10 @@ h1 {
   color: var(--text);
 }
 
+/* Transparent wrapper: tape panels become direct children of the board's
+   multicol flow, packing with the Majors panel instead of leaving holes. */
 .crypto-tape {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(500px, 1fr));
-  gap: 12px;
-  align-items: start;
-  margin-top: 12px;
+  display: contents;
 }
 
 .crypto-tape[hidden] {

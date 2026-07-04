@@ -113,7 +113,7 @@ groups:
     source: yahoo
     exchange: NASDAQ
     name: Marvell Technology
-- name: CRYPTO
+- name: MAJORS
   assets:
   - symbol: BTC
     type: crypto_perp

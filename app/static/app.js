@@ -1062,6 +1062,10 @@ function renderBoard(payload) {
   board.classList.remove("board-loading");
   board.classList.toggle("flat", marketLayout === "flat");
   const showTape = marketCategory === "crypto";
+  // Wider masonry columns fit the tape's six data columns; the tape flows
+  // through the same multicol container as the Majors panel (display:
+  // contents), so basket heights pack instead of leaving grid holes.
+  board.classList.toggle("board-crypto", showTape);
   cryptoTapeElement.hidden = !showTape;
   const tapeCounts = showTape ? renderCryptoTape(payload.crypto_tape || []) : { visible: 0, total: 0 };
   if (!groups.length) {
@@ -1071,6 +1075,7 @@ function renderBoard(payload) {
       tapeCounts.visible > 0
         ? ""
         : `<div class="empty-state">${hasFilter ? "No matching markets" : "No groups configured"}</div>`;
+    if (showTape && tapeCounts.visible > 0) board.appendChild(cryptoTapeElement);
     updateMarketFilterStatus(tapeCounts.visible, totalAssets);
     return;
   }
@@ -1101,9 +1106,10 @@ function renderBoard(payload) {
     board.appendChild(panel);
   });
 
-  board.querySelectorAll(".group-panel").forEach((panel) => {
+  board.querySelectorAll(".group-panel:not(.tape-panel)").forEach((panel) => {
     if (!nextGroups.has(panel.dataset.group)) panel.remove();
   });
+  if (showTape) board.appendChild(cryptoTapeElement);
   updateSortHeaders();
   updateMarketFilterStatus(visibleAssets, totalAssets);
 }
@@ -1363,7 +1369,7 @@ function setMarketSort(sortKey) {
 }
 
 function updateSortHeaders() {
-  board.querySelectorAll(".group-title button").forEach((button) => {
+  board.querySelectorAll(".group-panel:not(.tape-panel) .group-title button").forEach((button) => {
     const active = button.dataset.sortKey === marketSort.key;
     button.classList.toggle("active-sort", active);
     button.setAttribute("aria-sort", active ? (marketSort.direction === "asc" ? "ascending" : "descending") : "none");

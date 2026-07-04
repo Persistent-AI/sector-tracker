@@ -979,7 +979,17 @@ h1 {
 
 .tape-panel .group-title,
 .tape-panel .asset-row {
-  grid-template-columns: minmax(120px, 1fr) 84px 66px 70px 84px 90px;
+  /* Every track is shrinkable: fixed widths overflowed the panel when the
+     masonry column came out narrower than their sum, pushing 24h volume
+     values into (and past) the right border. */
+  grid-template-columns:
+    minmax(84px, 1.2fr) minmax(60px, 1fr) minmax(48px, 0.8fr)
+    minmax(50px, 0.8fr) minmax(60px, 1fr) minmax(68px, 1fr);
+}
+
+.tape-panel .group-title span:last-child,
+.tape-panel .asset-row span:last-child {
+  padding-right: 13px;
 }
 
 .tape-panel .tape-funding,

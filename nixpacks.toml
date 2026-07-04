@@ -1,6 +1,0 @@
-# Railway/Nixpacks build config.
-# The Yahoo provider fetches through the curl binary on purpose: curl's TLS
-# fingerprint with a bare UA passes Yahoo's bot scoring where python TLS
-# stacks get 429-banned. The default python image ships without curl.
-[phases.setup]
-aptPkgs = ["curl"]

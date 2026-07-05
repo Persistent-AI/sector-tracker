@@ -56,7 +56,9 @@ Environment variables:
 
 ```bash
 FINNHUB_API_KEY=
+EDIT_TOKEN=                # when set, watchlist edits require this token
 DATABASE_PATH=./data/market_board.sqlite3
+DATABASE_SEED_PATH=./config/market_board_seed.sqlite3
 WATCHLIST_PATH=./config/watchlists.yaml
 QUOTE_POLL_SECONDS=10
 HISTORY_REFRESH_SECONDS=3600
@@ -75,6 +77,9 @@ curl http://127.0.0.1:8000/api/groups
 curl http://127.0.0.1:8000/api/quotes
 curl http://127.0.0.1:8000/api/snapshots
 ```
+
+Diagnostics: `/api/lighter-status` (feed cache freshness, 429 cooldowns) and
+`/api/yahoo-status` (curl presence, live spark probe).
 
 ## Deployment
 

@@ -1141,6 +1141,9 @@ h1 {
   font-style: normal;
   letter-spacing: 0.04em;
   white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .funding-chip.funding-hot {
@@ -2319,9 +2322,31 @@ h1 {
     min-width: 100%;
   }
 
-  .group-title,
-  .asset-row {
-    grid-template-columns: minmax(76px, 1fr) 62px 56px 58px 40px 48px;
+  /* Phones: six data columns cannot fit, so secondary ones drop out.
+     Watchlist rows keep Symbol / Last / 1D% / Trend; tape rows keep
+     Symbol / Last / 1D% / 24h Vol. */
+  .group-panel:not(.tape-panel) .group-title,
+  .group-panel:not(.tape-panel) .asset-row {
+    grid-template-columns: minmax(96px, 1.4fr) minmax(72px, 1fr) minmax(56px, 0.9fr) minmax(52px, 0.9fr);
+  }
+
+  .group-panel:not(.tape-panel) .group-title span:nth-child(3),
+  .group-panel:not(.tape-panel) .group-title span:nth-child(5),
+  .asset-row [data-cell="abs"],
+  .asset-row [data-cell="rvol"] {
+    display: none;
+  }
+
+  .tape-panel .group-title,
+  .tape-panel .asset-row {
+    grid-template-columns: minmax(84px, 1.3fr) minmax(70px, 1fr) minmax(56px, 0.9fr) minmax(72px, 1fr);
+  }
+
+  .tape-panel .group-title span:nth-child(4),
+  .tape-panel .group-title span:nth-child(5),
+  .tape-panel .tape-funding,
+  .tape-panel .tape-oi {
+    display: none;
   }
 
   .modal-shell {

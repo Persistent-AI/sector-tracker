@@ -777,7 +777,9 @@ h1 {
 .theme-table th:nth-child(4),
 .theme-table td:nth-child(4),
 .theme-table th:nth-child(5),
-.theme-table td:nth-child(5) {
+.theme-table td:nth-child(5),
+.theme-table th:nth-child(6),
+.theme-table td:nth-child(6) {
   width: 68px;
 }
 
@@ -2284,14 +2286,24 @@ h1 {
     border-bottom: 1px solid var(--line);
   }
 
+  /* Phones: drop the middle return columns so theme names stay readable.
+     Score table keeps # / Theme / Score / 5D / Status; momentum keeps
+     # / Theme / Δ pace / Status. */
+  .theme-table th:nth-child(4),
+  .theme-table td:nth-child(4),
   .theme-table th:nth-child(5),
   .theme-table td:nth-child(5) {
     display: none;
   }
 
+  .theme-table th:nth-child(3),
+  .theme-table td:nth-child(3) {
+    width: 62px;
+  }
+
   .theme-table th:last-child,
   .theme-table td:last-child {
-    width: 92px;
+    width: 88px;
   }
 
   .board {

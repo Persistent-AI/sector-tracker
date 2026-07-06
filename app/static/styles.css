@@ -374,6 +374,70 @@ h1 {
   text-transform: uppercase;
 }
 
+.panel-heading h2 {
+  display: flex;
+  align-items: center;
+}
+
+.help-tip {
+  position: relative;
+  width: 15px;
+  height: 15px;
+  margin-left: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 1;
+  cursor: help;
+  flex: 0 0 auto;
+}
+
+.help-tip:hover,
+.help-tip:focus {
+  border-color: var(--accent);
+  color: var(--accent);
+  outline: none;
+}
+
+.help-tip::after {
+  content: attr(data-tip);
+  position: absolute;
+  top: calc(100% + 9px);
+  left: -10px;
+  z-index: 80;
+  width: min(330px, 78vw);
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  background: var(--surface-raised);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.55);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 11.5px;
+  font-weight: 400;
+  line-height: 1.55;
+  letter-spacing: normal;
+  text-align: left;
+  text-transform: none;
+  white-space: normal;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease;
+  pointer-events: none;
+}
+
+.help-tip:hover::after,
+.help-tip:focus::after {
+  opacity: 1;
+  visibility: visible;
+}
+
 .panel-heading span {
   color: var(--muted);
   font-family: var(--font-mono);

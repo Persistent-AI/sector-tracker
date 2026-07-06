@@ -726,7 +726,7 @@ function renderDailyBoard(overview, cryptoEtfFlows) {
       ${panelHeading(
         "Regime Read",
         asOfLabel,
-        "Risk-on/off from advance %, breadth vs 50/200DMA, and 3%+ movers across the universe"
+        "The market's overall mood, read from the whole watchlist. RISK-ON = most names rising, RISK-OFF = most falling, MIXED = no clear side. BROAD means most stocks join the move; NARROW means only a few drive it. The small numbers show the share of names trading above their 50- and 200-day average prices — a health check of the trend."
       )}
       <div class="regime-grid">
         ${regimeCell(
@@ -759,7 +759,7 @@ function renderDailyBoard(overview, cryptoEtfFlows) {
         ${panelHeading(
           "Benchmarks",
           "Return / Dist 50DMA / ATR Ext",
-          "ETF_MACRO group. ATR ext = distance from 20DMA in ATR(14) units; above +2 is stretched"
+          "The big reference ETFs (S&P 500, Nasdaq, semis, bonds, gold, oil). 1D/5D = return over one/five days. >50DMA = how far price sits from its 50-day average — above zero means uptrend. ATR ext = distance from the 20-day average measured in units of typical daily movement; beyond ±2 the move is stretched and often due for a pause."
         )}
         <div class="benchmark-grid">
           ${benchmarks.map(benchmarkCard).join("") || '<div class="empty-state">Add ETF_MACRO benchmarks</div>'}
@@ -770,7 +770,7 @@ function renderDailyBoard(overview, cryptoEtfFlows) {
         ${panelHeading(
           "Breadth",
           `${universe.history_count || 0} names with history`,
-          "Share of universe above moving averages; new 20-day highs/lows and 3%+ movers"
+          "How many of the tracked names take part in the move — one strong stock can mask a weak market. % > 20/50/200DMA = share of names above their short/medium/long-term average price. New 20-day highs/lows and ±3% movers show how forceful today is. Healthy rallies have broad participation."
         )}
         <div class="breadth-grid">
           ${breadthRow("% > 20DMA", formatPlainPct(universe.above_20dma_pct))}
@@ -793,7 +793,7 @@ function renderDailyBoard(overview, cryptoEtfFlows) {
         ${panelHeading(
           "Dominant Themes",
           "Score / \u0394 / 1D / 5D / Status",
-          "Score = 50 + 7×avg 1D + 2×avg 5D + 0.18×(advance% − 50) + 0.18×(>50DMA% − 50), clamped 0–100. Status: ≥75 dominant, ≥62 strong, ≥52 emerging, ≥45 neutral, ≥30 deteriorating, else fading"
+          "Each watchlist sector scored 0-100: today's move and the 5-day move carry most weight, plus how many members are rising and in uptrends. \u0394 = score change vs yesterday. Labels: \u226575 DOMINANT, \u226562 STRONG, \u226552 EMERGING, \u226545 NEUTRAL, below that DETERIORATING / FADING."
         )}
         ${themeTable(themes.slice(0, 8), "score", prevScores)}
       </section>
@@ -801,14 +801,18 @@ function renderDailyBoard(overview, cryptoEtfFlows) {
         ${panelHeading(
           "Momentum Shifts",
           "\u0394 pace = 1D move minus 5D daily pace, pct-pts",
-          "Themes accelerating or decelerating the hardest today versus their recent trend"
+          "Which sectors are speeding up or slowing down right now. \u0394 pace = today's move minus the average daily move of the last five days, in %-points. Positive = accelerating beyond its recent trend; negative = losing steam even if still up on the week."
         )}
         ${themeTable(movers, "momentum")}
       </section>
     </div>
 
     <section class="analytics-panel">
-      ${panelHeading("Crypto ETF Flows", cryptoEtfFlowNote(cryptoEtfFlows))}
+      ${panelHeading(
+        "Crypto ETF Flows",
+        cryptoEtfFlowNote(cryptoEtfFlows),
+        "Daily net money moving into (+) or out of (\u2212) the US spot Bitcoin, Ether and Solana ETFs, from Farside data. Inflows mean investors are buying ETF shares and the funds must buy the coins. 5D/10D = flows summed over the last 5 and 10 trading days."
+      )}
       ${cryptoEtfFlowPanel(cryptoEtfFlows)}
     </section>
 
@@ -816,7 +820,7 @@ function renderDailyBoard(overview, cryptoEtfFlows) {
       ${panelHeading(
         "Theme Rotation",
         "1D move versus 5D daily pace",
-        "Climbers move faster than their 5-day pace today; fallers slower. Pace in pct-pts per day"
+        "Money rotating between sectors. Climbers trade faster than their own 5-day pace today - attention is arriving; fallers trade slower - attention is leaving. Pace is in %-points per day, so it spots turns earlier than raw returns."
       )}
       <div class="rotation-grid">
         ${rotationColumn("↑ Climbers", rotation.climbers || [])}
@@ -842,8 +846,13 @@ function renderDailyBoard(overview, cryptoEtfFlows) {
 }
 
 function panelHeading(title, note, tip = "") {
-  const titleAttr = tip ? ` title="${escapeHtml(tip)}"` : "";
-  return `<header class="panel-heading"${titleAttr}><h2>${escapeHtml(title)}</h2><span>${escapeHtml(note || "")}</span></header>`;
+  // Explanations were invisible native title-tooltips; a visible ? badge
+  // with a styled popover makes them discoverable (hover, or tap on phones
+  // via tabindex focus).
+  const help = tip
+    ? `<button type="button" class="help-tip" aria-label="What is ${escapeHtml(title)}?" data-tip="${escapeHtml(tip)}">?</button>`
+    : "";
+  return `<header class="panel-heading"><h2>${escapeHtml(title)}${help}</h2><span>${escapeHtml(note || "")}</span></header>`;
 }
 
 function regimeCell(label, value, detail, tone = "") {
@@ -920,7 +929,7 @@ function cryptoBreadthPanel(breadth) {
     ${panelHeading(
       "Crypto Breadth",
       `${formatInteger(cb.total)} Lighter perps`,
-      "Advance/decline, big movers, and funding across every crypto perp on Lighter. Quote-based and separate from the curated universe above"
+      "Same participation check for the whole crypto market: every perp listed on Lighter. Median 1D = the typical coin's day. Funding > 0 = share of markets where longs pay shorts, a proxy for bullish positioning. High advance % with high funding = crowded optimism."
     )}
     <div class="breadth-grid">
       ${breadthRow("Median 1D", formatSignedPct(cb.median_change), medianTone)}

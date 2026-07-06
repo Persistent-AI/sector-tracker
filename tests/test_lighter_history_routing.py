@@ -56,7 +56,14 @@ class ScriptedLighter(LighterProvider):
     def __init__(self, close: float | None, symbols: set[str]) -> None:
         super().__init__()
         self._details = {
-            symbol: {"symbol": symbol, "market_id": index + 1, "status": "active"}
+            symbol: {
+                "symbol": symbol,
+                "market_id": index + 1,
+                "status": "active",
+                # TradFi synthetic bucket: the routing gate excludes crypto-
+                # classified markets from serving equity/ETF candles.
+                "strategy_index": 5,
+            }
             for index, symbol in enumerate(sorted(symbols))
         }
         self._details_time = monotonic()

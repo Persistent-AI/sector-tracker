@@ -353,9 +353,11 @@ async def test_cached_detail_helpers_answer_without_http(
     provider = seeded_provider(
         {
             "BTC": {"symbol": "BTC", "market_id": 1, "status": "active",
-                    "last_trade_price": 62000.0},
+                    "strategy_index": 2, "last_trade_price": 62000.0},
+            "SPY": {"symbol": "SPY", "market_id": 128, "status": "active",
+                    "strategy_index": 5, "last_trade_price": 744.5},
             "HALTED": {"symbol": "HALTED", "market_id": 8, "status": "active",
-                       "last_trade_price": 0.0},
+                       "strategy_index": 5, "last_trade_price": 0.0},
         }
     )
 
@@ -363,7 +365,9 @@ async def test_cached_detail_helpers_answer_without_http(
     assert await provider.has_market("NOSUCH") is False
     assert await provider.market_id("btc") == 1
     assert await provider.market_id("NOSUCH") is None
-    prices = await provider.live_prices({"btc", "HALTED", "NOSUCH"})
+    prices = await provider.live_prices({"btc", "SPY", "HALTED", "NOSUCH"})
 
-    assert prices == {"BTC": 62000.0}
+    # TradFi synthetics only: crypto-classified markets (ticker collisions
+    # like Lighter's ROBO token) never feed the equity overlay.
+    assert prices == {"SPY": 744.5}
     assert fake.requests == []

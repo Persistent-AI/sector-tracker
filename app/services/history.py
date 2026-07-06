@@ -46,6 +46,10 @@ class HistoryService:
             and asset.source != "lighter"
             and isinstance(lighter, LighterProvider)
             and await lighter.has_market(asset.symbol)
+            # Ticker collisions: Lighter's ROBO is a crypto token, not the
+            # robotics ETF. A Lighter market may only serve a TradFi asset's
+            # candles when Lighter classifies it as a TradFi synthetic.
+            and not lighter.is_crypto_market(asset.symbol)
         ):
             providers_to_try.append(lighter)
         configured = self.providers.get(asset.source)

@@ -141,12 +141,17 @@ class LighterProvider(QuoteProvider):
         return market_id if isinstance(market_id, int) else None
 
     async def live_prices(self, symbols: set[str]) -> dict[str, float]:
-        """Last trade prices for the requested symbols that Lighter lists."""
+        """Last trade prices for symbols Lighter lists as TradFi synthetics.
+
+        Used by the equity price overlay, so crypto-classified markets are
+        excluded: Lighter tickers collide with exchange tickers (its ROBO
+        token would otherwise price the ROBO robotics ETF at $0.014).
+        """
         details = await self._get_details()
         prices: dict[str, float] = {}
         for symbol in symbols:
             detail = details.get(symbol.upper())
-            if detail is None:
+            if detail is None or _is_crypto_detail(detail):
                 continue
             last = _number(detail.get("last_trade_price"))
             if last is not None and last > 0:

@@ -61,6 +61,7 @@ def aapl_details(last_trade_price: float = 213.5) -> dict[str, dict[str, Any]]:
             "symbol": "AAPL",
             "market_id": 42,
             "status": "active",
+            "strategy_index": 5,  # TradFi synthetic: eligible for the overlay
             "last_trade_price": last_trade_price,
         }
     }
@@ -244,11 +245,12 @@ async def test_overlay_candidates_exclude_lighter_sourced_and_crypto_assets(
     lighter = RecordingLighter(
         {
             "AAPL": {"symbol": "AAPL", "market_id": 42, "status": "active",
-                     "last_trade_price": 213.5},
+                     "strategy_index": 5, "last_trade_price": 213.5},
             "BTC": {"symbol": "BTC", "market_id": 1, "status": "active",
-                    "last_trade_price": 62000.0},
+                    "strategy_index": 2, "last_trade_price": 62000.0},
             "SYN": {"symbol": "SYN", "market_id": 6, "status": "active",
-                    "last_trade_price": 12.0, "daily_price_change": 1.0},
+                    "strategy_index": 2, "last_trade_price": 12.0,
+                    "daily_price_change": 1.0},
         }
     )
     service = QuoteService(tmp_path / "board.sqlite3", {"yahoo": yahoo, "lighter": lighter})
@@ -258,3 +260,28 @@ async def test_overlay_candidates_exclude_lighter_sourced_and_crypto_assets(
     # Only listing-venue equities/ETFs are overlay candidates; assets already
     # sourced from Lighter (crypto perps and synthetic equities) are not.
     assert lighter.requested_candidates == {"AAPL", "XLE"}
+
+
+@pytest.mark.asyncio
+async def test_overlay_skips_crypto_classified_ticker_collisions(
+    tmp_path: Path,
+) -> None:
+    """Lighter's ROBO is a crypto token; the ROBO ETF must keep its venue quote."""
+    yahoo = ScriptedQuotes({"ROBO": yahoo_quote("ROBO", last=83.4, previous_close=85.4)})
+    lighter = LighterProvider()
+    lighter._details = {
+        "ROBO": {
+            "symbol": "ROBO",
+            "market_id": 149,
+            "status": "active",
+            "strategy_index": 2,  # crypto bucket: ticker collision
+            "last_trade_price": 0.014,
+        }
+    }
+    lighter._details_time = monotonic()
+    service = QuoteService(tmp_path / "board.sqlite3", {"yahoo": yahoo, "lighter": lighter})
+
+    quotes = await service._fetch_fresh_quotes(equity_group("ROBO"))
+
+    assert quotes["ROBO"].provider == "yahoo"
+    assert quotes["ROBO"].last == 83.4

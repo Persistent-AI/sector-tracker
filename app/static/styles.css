@@ -49,6 +49,122 @@ body.modal-open {
   overflow: hidden;
 }
 
+/* --- Live news drawer ---------------------------------------------------- */
+/* Desktop: the open drawer shifts all in-flow content right via body
+   padding, so no layout rewiring is needed; fixed modals are unaffected.
+   Phones: it overlays the full width instead. */
+body.news-open {
+  padding-left: 340px;
+}
+
+.news-panel {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 40;
+  width: 340px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--line);
+  background: var(--surface);
+  transform: translateX(-100%);
+  transition: transform 0.16s ease;
+}
+
+body.news-open .news-panel {
+  transform: none;
+}
+
+.news-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 52px;
+  padding: 0 12px 0 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-raised);
+}
+
+.news-title {
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: var(--track-label);
+  text-transform: uppercase;
+}
+
+.news-status {
+  flex: 1;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-align: right;
+}
+
+.news-list {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.news-item {
+  display: block;
+  padding: 10px 16px 11px;
+  border-bottom: 1px solid var(--line-soft);
+  text-decoration: none;
+}
+
+.news-item:hover {
+  background: var(--surface-soft);
+}
+
+.news-item.news-new {
+  animation: news-flash 1.6s ease-out;
+}
+
+@keyframes news-flash {
+  0% { background: rgba(184, 160, 106, 0.16); }
+  100% { background: transparent; }
+}
+
+.news-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.news-meta strong {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.news-meta time {
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 9.5px;
+}
+
+.news-item p {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  color: var(--muted-strong);
+  font-size: 11.5px;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
 button,
 input,
 select {
@@ -2258,6 +2374,16 @@ h1 {
 @media (max-width: 700px) {
   .app-header {
     grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  /* Phones: the drawer overlays instead of pushing content. */
+  body.news-open {
+    padding-left: 0;
+  }
+
+  .news-panel {
+    width: 100%;
+    border-right: 0;
   }
 
   .brand {

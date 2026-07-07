@@ -40,6 +40,11 @@ const assetExchangeInput = document.querySelector("#asset-exchange");
 const assetNameInput = document.querySelector("#asset-name");
 const editorList = document.querySelector("#editor-list");
 const macroStrip = document.querySelector("#macro-strip");
+const newsPanel = document.querySelector("#news-panel");
+const newsList = document.querySelector("#news-list");
+const newsStatus = document.querySelector("#news-status");
+const newsToggle = document.querySelector("#news-toggle");
+const newsClose = document.querySelector("#news-close");
 
 let latestData = null;
 let latestCryptoEtfFlows = null;
@@ -70,6 +75,9 @@ let activeView = "daily";
 let pendingChartFromUrl = null;
 let restoringUrlState = false;
 const BOARD_CACHE_KEY = "board-cache-v1";
+let latestNews = null;
+let knownNewsIds = new Set();
+const NEWS_OPEN_KEY = "news-open";
 const BOARD_CACHE_MAX_AGE_MS = 24 * 3600 * 1000;
 let dataIsCached = false;
 
@@ -312,6 +320,8 @@ function init() {
   fetchQuotes();
   fetchCryptoEtfFlows();
   fetchSnapshots();
+  setNewsOpen(localStorage.getItem(NEWS_OPEN_KEY) === "1");
+  fetchNews();
   feedMode = shouldUseWebSocket() ? "ws" : "poll";
   updateFeedModeLabel();
   if (feedMode === "ws") openSocket();
@@ -326,12 +336,18 @@ function init() {
       fetchSnapshots();
     }
   }, 300000);
+  // WS pushes news instantly; polling is the fallback for serverless hosts.
+  window.setInterval(() => {
+    if (!document.hidden && feedMode !== "ws") fetchNews();
+  }, 20000);
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden) {
       fetchQuotes();
       fetchCryptoEtfFlows();
     }
   });
+  newsToggle.addEventListener("click", () => setNewsOpen(!document.body.classList.contains("news-open")));
+  newsClose.addEventListener("click", () => setNewsOpen(false));
   refreshButton.addEventListener("click", () => {
     fetchQuotes();
     fetchCryptoEtfFlows();
@@ -527,6 +543,8 @@ function openSocket() {
       applyQuotes(message.data);
       persistBoardCache(message.data);
       setConnection("live");
+    } else if (message.type === "news") {
+      renderNews(message.data);
     }
   });
   socket.addEventListener("close", () => {
@@ -601,6 +619,63 @@ function rememberAndPatchFunding(payload) {
         Math.round((rates.filter((value) => value > 0).length / rates.length) * 1000) / 10;
     }
   }
+}
+
+// --- Live news drawer -------------------------------------------------------
+// Merged feed of public Telegram channels, scraped server-side from their
+// t.me previews. New posts arrive over the quotes WebSocket within one poll
+// interval; HTTP polling covers hosts without a socket.
+function setNewsOpen(open) {
+  document.body.classList.toggle("news-open", open);
+  newsToggle.setAttribute("aria-pressed", String(open));
+  localStorage.setItem(NEWS_OPEN_KEY, open ? "1" : "0");
+}
+
+async function fetchNews() {
+  try {
+    const response = await fetch("/api/news");
+    if (!response.ok) throw new Error("news_failed");
+    renderNews(await response.json());
+  } catch (error) {
+    if (!latestNews) {
+      newsList.innerHTML = '<div class="empty-state">News feed unavailable</div>';
+    }
+  }
+}
+
+function renderNews(payload) {
+  const items = payload?.items || [];
+  latestNews = payload;
+  const updated = new Date(payload?.updated_at || Date.now());
+  newsStatus.textContent = Number.isNaN(updated.getTime()) ? "" : formatClock(updated);
+  if (!items.length) {
+    newsList.innerHTML = '<div class="empty-state">No posts yet</div>';
+    return;
+  }
+  const seenBefore = knownNewsIds.size > 0;
+  newsList.innerHTML = items.map((item) => newsItemMarkup(item, seenBefore)).join("");
+  knownNewsIds = new Set(items.map((item) => item.id));
+}
+
+function newsItemMarkup(item, seenBefore) {
+  const fresh = seenBefore && !knownNewsIds.has(item.id);
+  return `<a class="news-item${fresh ? " news-new" : ""}" href="${escapeHtml(item.link)}" target="_blank" rel="noopener">
+    <div class="news-meta">
+      <strong>${escapeHtml(item.channel_title || item.channel)}</strong>
+      <time title="${escapeHtml(item.timestamp)}">${escapeHtml(newsAge(item.timestamp))}</time>
+    </div>
+    <p>${escapeHtml(item.text)}</p>
+  </a>`;
+}
+
+function newsAge(timestamp) {
+  const stamp = Date.parse(timestamp || "");
+  if (Number.isNaN(stamp)) return "";
+  const seconds = Math.max(0, (Date.now() - stamp) / 1000);
+  if (seconds < 60) return "now";
+  if (seconds < 3600) return `${Math.round(seconds / 60)}m`;
+  if (seconds < 86400) return `${Math.round(seconds / 3600)}h`;
+  return `${Math.round(seconds / 86400)}d`;
 }
 
 async function fetchCryptoEtfFlows() {

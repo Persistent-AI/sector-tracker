@@ -65,6 +65,28 @@ async def history_refresh_loop(app_state: Any) -> None:
         await asyncio.sleep(app_state.settings.history_refresh_seconds)
 
 
+async def news_poll_loop(app_state: Any) -> None:
+    """Poll the Telegram previews and push new posts over the quotes WS.
+
+    Broadcasting only when the refresh found unseen posts keeps the socket
+    quiet between headlines; connected browsers see a new item roughly one
+    poll interval after it lands on Telegram.
+    """
+    await asyncio.sleep(2)
+    while True:
+        try:
+            new_items = await app_state.news_service.refresh()
+            if new_items:
+                await app_state.connection_manager.broadcast(
+                    {"type": "news", "data": app_state.news_service.feed_payload()}
+                )
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            pass
+        await asyncio.sleep(app_state.settings.news_poll_seconds)
+
+
 async def _refresh_daily_history(app_state: Any) -> None:
     semaphore = asyncio.Semaphore(6)
     symbols = list(

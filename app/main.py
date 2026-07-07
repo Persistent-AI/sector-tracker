@@ -29,12 +29,19 @@ from app.providers.finnhub import FinnhubProvider
 from app.providers.lighter import LighterProvider
 from app.providers.stooq import StooqProvider
 from app.providers.yahoo import YahooProvider
-from app.scheduler import ConnectionManager, history_refresh_loop, quote_poll_loop, stop_task
+from app.scheduler import (
+    ConnectionManager,
+    history_refresh_loop,
+    news_poll_loop,
+    quote_poll_loop,
+    stop_task,
+)
 from app.services.asset_profile import AssetProfileService
 from app.services.crypto_etf_flows import CryptoEtfFlowService
 from app.services.daily_board import DailyBoardService, crypto_breadth_metrics
 from app.services.history import HistoryService, bars_payload, find_asset
 from app.services.macro import MACRO_TAPE_GROUP_NAME, macro_payload, with_macro_group
+from app.services.news import NewsService
 from app.services.quotes import QuoteService, grouped_quotes_payload
 
 APP_DIR = Path(__file__).parent
@@ -83,13 +90,19 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         cache_seconds=settings.crypto_etf_flow_cache_seconds,
     )
     app.state.asset_profile_service = AssetProfileService()
+    app.state.news_service = NewsService(
+        settings.news_channels,
+        cache_seconds=settings.news_poll_seconds,
+    )
     app.state.connection_manager = ConnectionManager()
     app.state.watchlist_lock = asyncio.Lock()
     app.state.poll_task = None
     app.state.history_task = None
+    app.state.news_task = None
     if settings.enable_background_tasks:
         app.state.poll_task = asyncio.create_task(quote_poll_loop(app.state))
         app.state.history_task = asyncio.create_task(history_refresh_loop(app.state))
+        app.state.news_task = asyncio.create_task(news_poll_loop(app.state))
 
     try:
         yield
@@ -98,6 +111,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             await stop_task(app.state.poll_task)
         if app.state.history_task is not None:
             await stop_task(app.state.history_task)
+        if app.state.news_task is not None:
+            await stop_task(app.state.news_task)
 
 
 app = FastAPI(title="Cross-Asset Board", lifespan=lifespan)
@@ -328,6 +343,12 @@ async def quotes() -> dict[str, object]:
     grouped = await app.state.quote_service.get_board_quotes(with_macro_group(app.state.groups))
     await _heal_stale_history()
     return board_payload(grouped)
+
+
+@app.get("/api/news")
+async def news() -> dict[str, object]:
+    """Merged Telegram channel feed; also pushed over the WS as it updates."""
+    return await app.state.news_service.get_feed()
 
 
 async def _heal_stale_history() -> None:

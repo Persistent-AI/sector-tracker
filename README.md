@@ -13,7 +13,9 @@ grouped into Lighter's own baskets (L1, DeFi, AI, L2, Memes, Other via its token
 categories) and sortable by 24h volume, funding, and OI — new listings appear without
 config changes, and every tape row charts on click. A Crypto Breadth panel on the Daily
 Board reads advance/decline, big movers, and funding share across the full tape while the
-curated regime/breadth universe stays unpolluted.
+curated regime/breadth universe stays unpolluted. A toggleable full-height news drawer
+streams public Telegram channels (scraped from their t.me previews, no API key): the
+server polls every 15 seconds and pushes new posts to the browser over the WebSocket.
 
 Market data blends two worlds. Lighter DEX drives crypto perps end to end (quotes, candles,
 funding, OI) and overlays live 24/7 prices onto the ~34 equities/ETFs it lists as synthetic
@@ -63,6 +65,8 @@ WATCHLIST_PATH=./config/watchlists.yaml
 QUOTE_POLL_SECONDS=10
 HISTORY_REFRESH_SECONDS=3600
 CRYPTO_ETF_FLOW_CACHE_SECONDS=900
+NEWS_TELEGRAM_CHANNELS=marketfeed,RetardFrens   # public t.me handles for the news drawer
+NEWS_POLL_SECONDS=15
 ```
 
 Crypto ETF flow data uses public Farside tables via a text-rendered fetch route and is cached by

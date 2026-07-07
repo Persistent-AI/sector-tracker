@@ -26,7 +26,19 @@ class Settings(BaseSettings):
     quote_poll_seconds: int = Field(default=10, ge=5)
     history_refresh_seconds: int = Field(default=3600, ge=300)
     crypto_etf_flow_cache_seconds: int = Field(default=900, ge=60)
+    # Public Telegram channels for the live news drawer, comma-separated
+    # t.me handles. Polled every news_poll_seconds and pushed over the WS.
+    news_telegram_channels: str = "marketfeed,RetardFrens"
+    news_poll_seconds: int = Field(default=15, ge=5)
     enable_background_tasks: bool = True
+
+    @property
+    def news_channels(self) -> list[str]:
+        return [
+            channel.strip().lstrip("@")
+            for channel in self.news_telegram_channels.split(",")
+            if channel.strip()
+        ]
 
 
 def load_watchlists(path: Path) -> list[GroupConfig]:

@@ -565,7 +565,9 @@ h1 {
 
 .regime-grid {
   display: grid;
-  grid-template-columns: 1.12fr repeat(6, 1fr);
+  /* auto-fit: the grid wraps by available width, not viewport width, so it
+     stays readable when the news drawer narrows the content area. */
+  grid-template-columns: repeat(auto-fit, minmax(152px, 1fr));
 }
 
 .regime-cell {
@@ -661,9 +663,20 @@ h1 {
   grid-template-columns: 1.3fr 0.85fr 0.85fr;
 }
 
+/* The open news drawer removes 340px of content width, which viewport
+   media queries cannot see; stack the analytics grids one breakpoint
+   earlier when it is open. */
+@media (max-width: 1440px) {
+  body.news-open .analytics-grid,
+  body.news-open .analytics-grid.equal,
+  body.news-open .analytics-grid.triple {
+    grid-template-columns: 1fr;
+  }
+}
+
 .benchmark-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
 }
 
 .benchmark-card {

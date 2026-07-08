@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
 
-AssetType = Literal["equity", "etf", "crypto_perp", "crypto_spot", "index_proxy"]
+AssetType = Literal["equity", "etf", "future", "crypto_perp", "crypto_spot", "index_proxy"]
 ProviderName = Literal["yahoo", "stooq", "finnhub", "lighter"]
 
 

@@ -6,7 +6,7 @@ The app runs a FastAPI backend with a static dashboard frontend. The Daily Board
 regime, breadth, benchmark, theme-strength, five-day rotation metrics, and BTC/ETH/SOL spot
 ETF flow reads from live quotes and cached daily history. A macro tape (VIX, DXY, US 10Y)
 rides above both views, VIX feeds a volatility read in the regime panel, and the Markets view
-splits into TradFi and Crypto categories. TradFi keeps the clickable watchlist grid with an
+splits into TradFi, Crypto, and Commodities categories. TradFi keeps the clickable watchlist grid with an
 RVOL (volume vs 20-day average) column and chart workflow; Crypto shows the curated perp
 watchlist plus an auto-synced tape of every crypto perp listed on Lighter (~110 markets),
 grouped into Lighter's own baskets (L1, DeFi, AI, L2, Memes, Other via its tokenlist
@@ -53,6 +53,8 @@ The board supports:
 - `equity`
 - `etf`
 - `crypto_perp`
+- `future` (Yahoo futures like `GC=F`; Globex session chip, no RVOL — Yahoo's
+  historical futures volume uses a different counting regime than live prints)
 
 Environment variables:
 

@@ -142,6 +142,11 @@ const EXCHANGE_SESSIONS = {
   BATS: "us",
   CBOE: "us",
   KRX: "krx",
+  CME: "globex",
+  COMEX: "globex",
+  NYMEX: "globex",
+  CBOT: "globex",
+  ICE: "globex",
 };
 
 const SESSION_DEFS = {
@@ -160,6 +165,15 @@ const SESSION_DEFS = {
     days: [1, 2, 3, 4, 5],
     open: 9 * 60,
     close: 15 * 60 + 30,
+  },
+  // Wrapping session: opens Sun-Thu 18:00 ET, runs to 17:00 ET next day
+  // (the 17-18 maintenance break and the weekend read as closed).
+  globex: {
+    label: "Globex",
+    timeZone: "America/New_York",
+    days: [0, 1, 2, 3, 4],
+    open: 18 * 60,
+    close: 17 * 60,
   },
 };
 
@@ -184,6 +198,14 @@ function sessionState(sessionKey) {
   const def = SESSION_DEFS[sessionKey];
   if (!def) return null;
   const now = zonedNow(def.timeZone);
+  if (def.open > def.close) {
+    // Overnight session: `days` are the days it OPENS in the evening.
+    const prevDay = (now.day + 6) % 7;
+    const open =
+      (def.days.includes(now.day) && now.minutes >= def.open) ||
+      (def.days.includes(prevDay) && now.minutes < def.close);
+    return { key: sessionKey, label: def.label, state: open ? "open" : "closed" };
+  }
   if (!def.days.includes(now.day)) return { key: sessionKey, label: def.label, state: "closed" };
   if (now.minutes >= def.open && now.minutes < def.close) {
     return { key: sessionKey, label: def.label, state: "open" };
@@ -280,8 +302,9 @@ function restoreUrlState() {
       marketSearchQuery = query;
       marketSearch.value = query;
     }
-    if (params.get("cat") === "crypto") {
-      marketCategory = "crypto";
+    const cat = params.get("cat");
+    if (cat === "crypto" || cat === "commodities") {
+      marketCategory = cat;
       updateCategoryButtons();
     }
     if (params.get("layout") === "flat") {
@@ -462,7 +485,10 @@ function updateCategoryButtons() {
 }
 
 function groupCategory(group) {
-  return (group.assets || []).some((asset) => isCryptoAsset(asset.type)) ? "crypto" : "tradfi";
+  const assets = group.assets || [];
+  if (assets.some((asset) => isCryptoAsset(asset.type))) return "crypto";
+  if (assets.some((asset) => asset.type === "future")) return "commodities";
+  return "tradfi";
 }
 
 function selectView(view) {
@@ -2758,6 +2784,8 @@ function findAssetSummary(symbol) {
 }
 
 function numericOrNull(value) {
+  // Number(null) and Number("") are 0 — treat absent as absent.
+  if (value === null || value === undefined || value === "") return null;
   const number = Number(value);
   return Number.isFinite(number) ? number : null;
 }
@@ -2800,7 +2828,8 @@ function formatUsdPrice(value) {
 
 function formatBoardPrice(value, error, currency) {
   if (error || typeof value !== "number" || value === 0) return "--";
-  if (!currency || currency === "USD") return formatPrice(value);
+  // USX = US cents (CBOT/ICE): full precision, bare, like USD.
+  if (!currency || currency === "USD" || currency === "USX") return formatPrice(value);
   return `${currencyPrefix(currency)}${formatCompactPrice(value)}`;
 }
 
@@ -2820,7 +2849,7 @@ function formatSigned(value) {
 
 function formatBoardSignedChange(value, currency) {
   if (typeof value !== "number") return "--";
-  if (!currency || currency === "USD") return formatSigned(value);
+  if (!currency || currency === "USD" || currency === "USX") return formatSigned(value);
   return `${value >= 0 ? "+" : "-"}${currencyPrefix(currency)}${formatCompactPrice(Math.abs(value))}`;
 }
 
@@ -2854,7 +2883,9 @@ function currencyPrefix(currency) {
     EUR: "€",
     GBP: "£",
     USD: "$",
-  }[currency] || `${currency} `;
+    // US-cents quotes (CBOT/ICE ags): shown bare, the futures convention.
+    USX: "",
+  }[currency] ?? `${currency} `;
 }
 
 function formatUsdFlow(value) {

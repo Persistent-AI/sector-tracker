@@ -189,7 +189,10 @@ def _market_summary(
             "1Y": _return_from_close(current, closes, 252),
         },
         "range_52w": _range_52w(current, bars),
-        "rvol": _relative_volume(quote, bars),
+        # Yahoo's historical daily volume for futures is a different (much
+        # smaller) counting regime than the live print, so the ratio is
+        # meaningless there (GC=F showed 148x). No RVOL for futures.
+        "rvol": None if asset.type == "future" else _relative_volume(quote, bars),
         "open_change_pct": _open_change_pct(quote, bars),
         "has_history": bool(bars),
     }

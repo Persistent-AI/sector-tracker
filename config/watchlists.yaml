@@ -454,3 +454,94 @@ groups:
     source: yahoo
     exchange: NYSEARCA
     name: Oil ETF
+- name: METALS_FUTURES
+  assets:
+  - symbol: GC=F
+    type: future
+    source: yahoo
+    exchange: COMEX
+    name: Gold
+  - symbol: SI=F
+    type: future
+    source: yahoo
+    exchange: COMEX
+    name: Silver
+  - symbol: HG=F
+    type: future
+    source: yahoo
+    exchange: COMEX
+    name: Copper
+  - symbol: PL=F
+    type: future
+    source: yahoo
+    exchange: NYMEX
+    name: Platinum
+  - symbol: PA=F
+    type: future
+    source: yahoo
+    exchange: NYMEX
+    name: Palladium
+- name: ENERGY_FUTURES
+  assets:
+  - symbol: CL=F
+    type: future
+    source: yahoo
+    exchange: NYMEX
+    name: WTI Crude
+  - symbol: BZ=F
+    type: future
+    source: yahoo
+    exchange: NYMEX
+    name: Brent Crude
+  - symbol: NG=F
+    type: future
+    source: yahoo
+    exchange: NYMEX
+    name: Natural Gas
+  - symbol: RB=F
+    type: future
+    source: yahoo
+    exchange: NYMEX
+    name: RBOB Gasoline
+  - symbol: HO=F
+    type: future
+    source: yahoo
+    exchange: NYMEX
+    name: Heating Oil
+- name: AGRICULTURE
+  assets:
+  - symbol: ZC=F
+    type: future
+    source: yahoo
+    exchange: CBOT
+    name: Corn
+  - symbol: ZW=F
+    type: future
+    source: yahoo
+    exchange: CBOT
+    name: Wheat
+  - symbol: ZS=F
+    type: future
+    source: yahoo
+    exchange: CBOT
+    name: Soybeans
+  - symbol: KC=F
+    type: future
+    source: yahoo
+    exchange: ICE
+    name: Coffee
+  - symbol: SB=F
+    type: future
+    source: yahoo
+    exchange: ICE
+    name: Sugar
+  - symbol: CC=F
+    type: future
+    source: yahoo
+    exchange: ICE
+    name: Cocoa
+  - symbol: CT=F
+    type: future
+    source: yahoo
+    exchange: ICE
+    name: Cotton

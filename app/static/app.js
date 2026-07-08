@@ -45,6 +45,7 @@ const newsList = document.querySelector("#news-list");
 const newsStatus = document.querySelector("#news-status");
 const newsToggle = document.querySelector("#news-toggle");
 const newsClose = document.querySelector("#news-close");
+const newsChannelsBar = document.querySelector("#news-channels");
 
 let latestData = null;
 let latestCryptoEtfFlows = null;
@@ -78,6 +79,14 @@ const BOARD_CACHE_KEY = "board-cache-v1";
 let latestNews = null;
 let knownNewsIds = new Set();
 const NEWS_OPEN_KEY = "news-open";
+// Muted news channels, persisted per browser.
+const NEWS_MUTED_KEY = "news-muted-channels-v1";
+let mutedNewsChannels = new Set();
+try {
+  mutedNewsChannels = new Set(JSON.parse(localStorage.getItem(NEWS_MUTED_KEY) || "[]"));
+} catch (error) {
+  mutedNewsChannels = new Set();
+}
 const BOARD_CACHE_MAX_AGE_MS = 24 * 3600 * 1000;
 let dataIsCached = false;
 
@@ -348,6 +357,18 @@ function init() {
   });
   newsToggle.addEventListener("click", () => setNewsOpen(!document.body.classList.contains("news-open")));
   newsClose.addEventListener("click", () => setNewsOpen(false));
+  newsChannelsBar.addEventListener("click", (event) => {
+    const chip = event.target.closest("button[data-channel]");
+    if (!chip) return;
+    const channel = chip.dataset.channel;
+    if (mutedNewsChannels.has(channel)) {
+      mutedNewsChannels.delete(channel);
+    } else {
+      mutedNewsChannels.add(channel);
+    }
+    localStorage.setItem(NEWS_MUTED_KEY, JSON.stringify([...mutedNewsChannels]));
+    if (latestNews) renderNews(latestNews);
+  });
   refreshButton.addEventListener("click", () => {
     fetchQuotes();
     fetchCryptoEtfFlows();
@@ -648,13 +669,38 @@ function renderNews(payload) {
   latestNews = payload;
   const updated = new Date(payload?.updated_at || Date.now());
   newsStatus.textContent = Number.isNaN(updated.getTime()) ? "" : formatClock(updated);
+  renderNewsChannels(payload);
   if (!items.length) {
     newsList.innerHTML = '<div class="empty-state">No posts yet</div>';
     return;
   }
-  const seenBefore = knownNewsIds.size > 0;
-  newsList.innerHTML = items.map((item) => newsItemMarkup(item, seenBefore)).join("");
+  const visible = items.filter((item) => !mutedNewsChannels.has(item.channel));
+  if (!visible.length) {
+    newsList.innerHTML = '<div class="empty-state">All channels muted</div>';
+  } else {
+    const seenBefore = knownNewsIds.size > 0;
+    newsList.innerHTML = visible.map((item) => newsItemMarkup(item, seenBefore)).join("");
+  }
+  // Track ALL ids (muted included) so unmuting never fakes a "new" flash.
   knownNewsIds = new Set(items.map((item) => item.id));
+}
+
+function renderNewsChannels(payload) {
+  const channels = payload?.channels || [];
+  if (!channels.length) {
+    newsChannelsBar.innerHTML = "";
+    return;
+  }
+  const titles = new Map((payload?.items || []).map((item) => [item.channel, item.channel_title]));
+  newsChannelsBar.innerHTML = channels
+    .map((channel) => {
+      const muted = mutedNewsChannels.has(channel);
+      const label = titles.get(channel) || channel;
+      return `<button type="button" class="news-channel-chip${muted ? " muted" : ""}"
+        data-channel="${escapeHtml(channel)}" aria-pressed="${muted ? "false" : "true"}"
+        title="${muted ? "Unmute" : "Mute"} @${escapeHtml(channel)}">${escapeHtml(label)}</button>`;
+    })
+    .join("");
 }
 
 function newsItemMarkup(item, seenBefore) {

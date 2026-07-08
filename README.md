@@ -65,7 +65,7 @@ WATCHLIST_PATH=./config/watchlists.yaml
 QUOTE_POLL_SECONDS=10
 HISTORY_REFRESH_SECONDS=3600
 CRYPTO_ETF_FLOW_CACHE_SECONDS=900
-NEWS_TELEGRAM_CHANNELS=marketfeed,RetardFrens   # public t.me handles for the news drawer
+NEWS_TELEGRAM_CHANNELS=marketfeed,RetardFrens,tradehaven,AGGRNEWSWIRE   # public t.me handles; each gets a mute chip in the drawer
 NEWS_POLL_SECONDS=15
 ```
 

@@ -104,6 +104,45 @@ body.news-open .news-panel {
   text-align: right;
 }
 
+/* --- News channel mute chips ------------------------------------------ */
+.news-channels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.news-channels:empty {
+  display: none;
+}
+
+.news-channel-chip {
+  padding: 2px 8px;
+  border: 1px solid var(--accent-dim, var(--line));
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  line-height: 1.6;
+  text-transform: uppercase;
+  white-space: normal;
+}
+
+.news-channel-chip:hover {
+  border-color: var(--accent);
+}
+
+.news-channel-chip.muted {
+  border-color: var(--line);
+  color: var(--muted);
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
 .news-list {
   flex: 1;
   overflow-y: auto;

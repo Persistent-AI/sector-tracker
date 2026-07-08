@@ -1477,6 +1477,7 @@ function ensureGroupPanel(groupName) {
     groupHeaderCell("Last", "last"),
     groupHeaderCell("1D Abs", "abs"),
     groupHeaderCell("1D %", "pct"),
+    groupHeaderCell("Open", "open"),
     groupHeaderCell("RVOL", "rvol"),
     groupHeaderCell("Trend", "trend")
   );
@@ -1513,7 +1514,10 @@ function groupHeaderCell(label, sortKey) {
   button.type = "button";
   button.dataset.sortKey = sortKey;
   button.textContent = label;
-  button.title = `Sort by ${label}`;
+  button.title =
+    sortKey === "open"
+      ? "Change since today's open (UTC day for crypto) · click to sort"
+      : `Sort by ${label}`;
   button.addEventListener("click", () => setMarketSort(sortKey));
   cell.appendChild(button);
   return cell;
@@ -1564,6 +1568,7 @@ function sortValue(asset, key) {
   if (key === "abs") return numericOrNull(displayQuoteValue(quote, "change_abs"));
   if (key === "pct") return numericOrNull(displayQuoteValue(quote, "change_pct"));
   if (key === "rvol") return numericOrNull(asset.summary?.rvol);
+  if (key === "open") return numericOrNull(asset.summary?.open_change_pct);
   return null;
 }
 
@@ -1874,6 +1879,14 @@ function updateRow(row, asset, options = {}) {
     display.change_pct,
     changeClass(display.change_pct),
     !options.initial
+  );
+  const openChange = numericOrNull(asset.summary?.open_change_pct);
+  updateValueCell(
+    ensureRowCell(row, "open", "open-cell"),
+    formatSignedPct(openChange),
+    openChange,
+    `open-cell ${changeClass(openChange)}`,
+    false
   );
   const rvol = numericOrNull(asset.summary?.rvol);
   updateValueCell(

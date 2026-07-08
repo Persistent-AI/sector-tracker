@@ -1106,7 +1106,7 @@ h1 {
 
 .board {
   column-gap: 12px;
-  columns: 390px;
+  columns: 460px;
 }
 
 .board.board-crypto {
@@ -1274,7 +1274,9 @@ h1 {
 .group-title,
 .asset-row {
   display: grid;
-  grid-template-columns: minmax(96px, 1fr) 72px 64px 60px 58px 62px;
+  grid-template-columns:
+    minmax(88px, 1.7fr) minmax(64px, 1fr) minmax(56px, 0.9fr) minmax(52px, 0.9fr)
+    minmax(52px, 0.9fr) minmax(50px, 0.8fr) minmax(56px, 0.9fr);
   align-items: stretch;
 }
 
@@ -2535,7 +2537,9 @@ h1 {
 
   .group-panel:not(.tape-panel) .group-title span:nth-child(3),
   .group-panel:not(.tape-panel) .group-title span:nth-child(5),
+  .group-panel:not(.tape-panel) .group-title span:nth-child(6),
   .asset-row [data-cell="abs"],
+  .asset-row [data-cell="open"],
   .asset-row [data-cell="rvol"] {
     display: none;
   }

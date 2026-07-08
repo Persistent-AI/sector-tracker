@@ -422,7 +422,33 @@ def _quote_from_chart_result(asset: AssetConfig, result: dict[str, Any]) -> Quot
         timestamp=market_price[1] if market_price else datetime.now(UTC),
         currency=_currency(meta),
         volume=_number(meta.get("regularMarketVolume")),
+        open_price=_session_open(result),
     )
+
+
+def _session_open(result: dict[str, Any]) -> float | None:
+    """Today's opening print from the range=1d bars in the quote response.
+
+    The v8 chart fallback carries true opens; the spark endpoint is
+    close-only, so early in the session the first minute's close stands in
+    until the exact daily-bar open lands in the cache (which the board
+    prefers when available).
+    """
+    indicators = result.get("indicators")
+    if not isinstance(indicators, dict):
+        return None
+    quotes = indicators.get("quote")
+    if not isinstance(quotes, list) or not quotes or not isinstance(quotes[0], dict):
+        return None
+    for key in ("open", "close"):
+        values = quotes[0].get(key)
+        if not isinstance(values, list):
+            continue
+        for value in values:
+            parsed = _number(value)
+            if parsed is not None and parsed > 0:
+                return parsed
+    return None
 
 
 def _quote_with_usd_display(quote: Quote, fx_quote: Quote | None) -> Quote:

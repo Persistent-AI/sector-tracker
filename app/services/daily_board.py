@@ -190,8 +190,49 @@ def _market_summary(
         },
         "range_52w": _range_52w(current, bars),
         "rvol": _relative_volume(quote, bars),
+        "open_change_pct": _open_change_pct(quote, bars),
         "has_history": bool(bars),
     }
+
+
+def _open_change_pct(quote: Quote | None, bars: list[Bar]) -> float | None:
+    """Move since today's open (UTC day for 24/7 markets).
+
+    Prefers the cached daily bar's open — exact and FX-normalized — and
+    falls back to the quote's opening print early in the session before
+    that bar exists. Non-USD quotes skip the fallback: their display
+    pipeline is bar-based.
+    """
+    current = _current_price(quote, bars)
+    if current is None or current <= 0:
+        return None
+    open_price = _today_bar_open(quote, bars)
+    if (
+        open_price is None
+        and quote is not None
+        and quote.currency in (None, "USD")
+        and quote.open_price
+        and quote.open_price > 0
+    ):
+        open_price = quote.open_price
+    if open_price is None or open_price <= 0:
+        return None
+    return round((current - open_price) / open_price * 100, 4)
+
+
+def _today_bar_open(quote: Quote | None, bars: list[Bar]) -> float | None:
+    if not bars:
+        return None
+    last = bars[-1]
+    as_of = quote.timestamp if quote is not None else datetime.now(UTC)
+    if as_of.tzinfo is None:
+        as_of = as_of.replace(tzinfo=UTC)
+    bar_time = last.timestamp
+    if bar_time.tzinfo is None:
+        bar_time = bar_time.replace(tzinfo=UTC)
+    if bar_time.astimezone(UTC).date() != as_of.astimezone(UTC).date():
+        return None
+    return last.open if last.open > 0 else None
 
 
 def _relative_volume(quote: Quote | None, bars: list[Bar]) -> float | None:

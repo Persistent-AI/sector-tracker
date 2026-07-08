@@ -29,6 +29,9 @@ class Quote:
     volume: float | None = None
     funding_rate: float | None = None
     open_interest_usd: float | None = None
+    # Today's session open (or first live print early in the session).
+    # Transient: feeds the from-open column, deliberately not persisted.
+    open_price: float | None = None
 
     @classmethod
     def from_last_and_prev_close(
@@ -51,6 +54,7 @@ class Quote:
         volume: float | None = None,
         funding_rate: float | None = None,
         open_interest_usd: float | None = None,
+        open_price: float | None = None,
     ) -> Quote:
         if previous_close and previous_close != 0:
             change_abs = round(last - previous_close, 6)
@@ -78,6 +82,7 @@ class Quote:
             volume=volume,
             funding_rate=funding_rate,
             open_interest_usd=open_interest_usd,
+            open_price=open_price,
         )
 
 

@@ -66,9 +66,7 @@ def test_no_current_volume_when_last_bar_is_not_today_returns_none() -> None:
 
 
 def test_none_quote_with_historical_bars_returns_none() -> None:
-    bars = [
-        _bar(datetime(2020, 1, 1, tzinfo=UTC) + timedelta(days=i), 100.0) for i in range(15)
-    ]
+    bars = [_bar(datetime(2020, 1, 1, tzinfo=UTC) + timedelta(days=i), 100.0) for i in range(15)]
 
     assert _relative_volume(None, bars) is None
 
@@ -81,9 +79,7 @@ def test_fewer_than_ten_baseline_bars_returns_none() -> None:
 
 def test_zero_volume_bars_do_not_count_toward_baseline() -> None:
     # 12 completed sessions but only 9 with volume: below the 10-bar minimum.
-    bars = [
-        _bar(_TODAY - timedelta(days=12 - i), 100.0 if i < 9 else 0.0) for i in range(12)
-    ]
+    bars = [_bar(_TODAY - timedelta(days=12 - i), 100.0 if i < 9 else 0.0) for i in range(12)]
 
     assert _relative_volume(_quote(volume=250.0), bars) is None
 

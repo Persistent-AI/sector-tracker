@@ -40,7 +40,6 @@ const assetExchangeInput = document.querySelector("#asset-exchange");
 const assetNameInput = document.querySelector("#asset-name");
 const editorList = document.querySelector("#editor-list");
 const macroStrip = document.querySelector("#macro-strip");
-const newsPanel = document.querySelector("#news-panel");
 const newsList = document.querySelector("#news-list");
 const newsStatus = document.querySelector("#news-status");
 const newsToggle = document.querySelector("#news-toggle");
@@ -2821,10 +2820,6 @@ function formatPrice(value, error) {
   return value.toPrecision(4);
 }
 
-function formatUsdPrice(value) {
-  const price = formatPrice(value);
-  return price === "--" ? price : `$${price}`;
-}
 
 function formatBoardPrice(value, error, currency) {
   if (error || typeof value !== "number" || value === 0) return "--";

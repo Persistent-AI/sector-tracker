@@ -1534,12 +1534,6 @@ h1 {
   white-space: normal;
 }
 
-.source-cell {
-  color: var(--muted);
-  font-size: 10px;
-  letter-spacing: 0.04em;
-}
-
 .sparkline-cell {
   display: flex;
   align-items: center;
@@ -1571,10 +1565,6 @@ h1 {
 
 .stale-row {
   color: var(--muted);
-}
-
-.stale-row .source-cell {
-  color: var(--accent);
 }
 
 .empty-state {

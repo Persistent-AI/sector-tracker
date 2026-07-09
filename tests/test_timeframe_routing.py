@@ -61,9 +61,7 @@ BTC_PERP = AssetConfig(symbol="BTC", type="crypto_perp", source="lighter")
         ("10y", "2h", "6mo"),
     ],
 )
-def test_yahoo_period_caps_range_per_interval(
-    range_: str, interval: str, expected: str
-) -> None:
+def test_yahoo_period_caps_range_per_interval(range_: str, interval: str, expected: str) -> None:
     assert _yahoo_period(range_, interval) == expected
 
 
@@ -164,9 +162,7 @@ def _install_candles(
         async def __aexit__(self, *exc: Any) -> bool:
             return False
 
-        async def get(
-            self, url: str, params: dict[str, Any] | None = None
-        ) -> _FakeResponse:
+        async def get(self, url: str, params: dict[str, Any] | None = None) -> _FakeResponse:
             assert url == f"{lighter_module.BASE_URL}/candles"
             requests.append(dict(params or {}))
             return _FakeResponse(payload)
@@ -295,9 +291,7 @@ def _daily_bar(timestamp: datetime) -> Bar:
     ("range_", "window_days"),
     [("6mo", 186), ("10y", 3660)],
 )
-def test_filter_bars_to_range_supports_6mo_and_10y_windows(
-    range_: str, window_days: int
-) -> None:
+def test_filter_bars_to_range_supports_6mo_and_10y_windows(range_: str, window_days: int) -> None:
     end = datetime(2026, 7, 1, tzinfo=UTC)
     inside = end - timedelta(days=window_days)
     outside = end - timedelta(days=window_days + 1)

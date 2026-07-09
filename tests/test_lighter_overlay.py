@@ -81,16 +81,18 @@ def equity_group(*symbols: str) -> list[GroupConfig]:
 
 def test_official_close_uses_previous_close_while_session_is_live() -> None:
     now = datetime(2026, 7, 3, 15, 0, tzinfo=UTC)
-    quote = yahoo_quote("AAPL", last=210.0, previous_close=208.0,
-                        timestamp=now - timedelta(minutes=5))
+    quote = yahoo_quote(
+        "AAPL", last=210.0, previous_close=208.0, timestamp=now - timedelta(minutes=5)
+    )
 
     assert _official_close(quote, now) == 208.0
 
 
 def test_official_close_uses_last_print_after_hours() -> None:
     now = datetime(2026, 7, 3, 15, 0, tzinfo=UTC)
-    quote = yahoo_quote("AAPL", last=210.0, previous_close=208.0,
-                        timestamp=now - timedelta(hours=2))
+    quote = yahoo_quote(
+        "AAPL", last=210.0, previous_close=208.0, timestamp=now - timedelta(hours=2)
+    )
 
     assert _official_close(quote, now) == 210.0
 
@@ -166,8 +168,7 @@ async def test_overlay_skips_non_usd_listings(tmp_path: Path) -> None:
     original = yahoo_quote("SMSN", last=71000.0, previous_close=70500.0, currency="KRW")
     yahoo = ScriptedQuotes({"SMSN": original})
     lighter = lighter_with(
-        {"SMSN": {"symbol": "SMSN", "market_id": 5, "status": "active",
-                  "last_trade_price": 50.0}}
+        {"SMSN": {"symbol": "SMSN", "market_id": 5, "status": "active", "last_trade_price": 50.0}}
     )
     service = QuoteService(tmp_path / "board.sqlite3", {"yahoo": yahoo, "lighter": lighter})
 
@@ -244,13 +245,28 @@ async def test_overlay_candidates_exclude_lighter_sourced_and_crypto_assets(
     )
     lighter = RecordingLighter(
         {
-            "AAPL": {"symbol": "AAPL", "market_id": 42, "status": "active",
-                     "strategy_index": 5, "last_trade_price": 213.5},
-            "BTC": {"symbol": "BTC", "market_id": 1, "status": "active",
-                    "strategy_index": 2, "last_trade_price": 62000.0},
-            "SYN": {"symbol": "SYN", "market_id": 6, "status": "active",
-                    "strategy_index": 2, "last_trade_price": 12.0,
-                    "daily_price_change": 1.0},
+            "AAPL": {
+                "symbol": "AAPL",
+                "market_id": 42,
+                "status": "active",
+                "strategy_index": 5,
+                "last_trade_price": 213.5,
+            },
+            "BTC": {
+                "symbol": "BTC",
+                "market_id": 1,
+                "status": "active",
+                "strategy_index": 2,
+                "last_trade_price": 62000.0,
+            },
+            "SYN": {
+                "symbol": "SYN",
+                "market_id": 6,
+                "status": "active",
+                "strategy_index": 2,
+                "last_trade_price": 12.0,
+                "daily_price_change": 1.0,
+            },
         }
     )
     service = QuoteService(tmp_path / "board.sqlite3", {"yahoo": yahoo, "lighter": lighter})

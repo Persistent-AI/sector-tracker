@@ -374,9 +374,7 @@ def _quote_from_detail(
         timestamp=now,
         currency="USD",
         funding_rate=funding.get(asset.symbol.upper()) if is_perp else None,
-        open_interest_usd=(
-            open_interest * last if is_perp and open_interest is not None else None
-        ),
+        open_interest_usd=(open_interest * last if is_perp and open_interest is not None else None),
         # Rolling 24h base-token volume: always fresh, unlike the cached
         # daily bar whose volume freezes between history refreshes (there is
         # no background refresh at all on serverless). Feeds RVOL.

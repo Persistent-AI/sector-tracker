@@ -73,9 +73,9 @@ class ScriptedLighter(LighterProvider):
         return [make_bar(asset.symbol, "lighter", self._close, interval)]
 
 
-def make_service(tmp_path: Path, lighter: LighterProvider | None) -> tuple[
-    HistoryService, ScriptedHistory
-]:
+def make_service(
+    tmp_path: Path, lighter: LighterProvider | None
+) -> tuple[HistoryService, ScriptedHistory]:
     yahoo = ScriptedHistory(close=222.0)
     providers: dict[ProviderName, QuoteProvider] = {"yahoo": yahoo}
     if lighter is not None:

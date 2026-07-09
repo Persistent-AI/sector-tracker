@@ -6,16 +6,19 @@ The app runs a FastAPI backend with a static dashboard frontend. The Daily Board
 regime, breadth, benchmark, theme-strength, five-day rotation metrics, and BTC/ETH/SOL spot
 ETF flow reads from live quotes and cached daily history. A macro tape (VIX, DXY, US 10Y)
 rides above both views, VIX feeds a volatility read in the regime panel, and the Markets view
-splits into TradFi, Crypto, and Commodities categories. TradFi keeps the clickable watchlist grid with an
-RVOL (volume vs 20-day average) column and chart workflow; Crypto shows the curated perp
-watchlist plus an auto-synced tape of every crypto perp listed on Lighter (~110 markets),
-grouped into Lighter's own baskets (L1, DeFi, AI, L2, Memes, Other via its tokenlist
-categories) and sortable by 24h volume, funding, and OI — new listings appear without
-config changes, and every tape row charts on click. A Crypto Breadth panel on the Daily
-Board reads advance/decline, big movers, and funding share across the full tape while the
-curated regime/breadth universe stays unpolluted. A toggleable full-height news drawer
-streams public Telegram channels (scraped from their t.me previews, no API key): the
-server polls every 15 seconds and pushes new posts to the browser over the WebSocket.
+splits into TradFi, Crypto, and Commodities categories. TradFi keeps the clickable watchlist
+grid — Last / Abs / 1D% / ΔOpen (move since today's session open; UTC day for crypto) /
+RVOL (volume vs 20-day average) / trend sparkline — with the chart workflow; Crypto shows
+the curated perp watchlist plus an auto-synced tape of every crypto perp listed on Lighter
+(~110 markets), grouped into Lighter's own baskets (L1, DeFi, AI, L2, Memes, Other via its
+tokenlist categories) and sortable by 24h volume, funding, and OI — new listings appear
+without config changes, and every tape row charts on click. Commodities tracks Yahoo
+continuous front-month futures (metals, energy, ags) with a Globex-aware session chip.
+A Crypto Breadth panel on the Daily Board reads advance/decline, big movers, and funding
+share across the full tape while the curated regime/breadth universe stays unpolluted.
+A toggleable full-height news drawer streams public Telegram channels (scraped from their
+t.me previews, no API key): the server polls every 15 seconds and pushes new posts to the
+browser over the WebSocket, and each channel gets a per-browser mute chip.
 
 Market data blends two worlds. Lighter DEX drives crypto perps end to end (quotes, candles,
 funding, OI) and overlays live 24/7 prices onto the ~34 equities/ETFs it lists as synthetic
@@ -64,6 +67,7 @@ EDIT_TOKEN=                # when set, watchlist edits require this token
 DATABASE_PATH=./data/market_board.sqlite3
 DATABASE_SEED_PATH=./config/market_board_seed.sqlite3
 WATCHLIST_PATH=./config/watchlists.yaml
+WATCHLIST_SEED_PATH=./config/watchlists.yaml
 QUOTE_POLL_SECONDS=10
 HISTORY_REFRESH_SECONDS=3600
 CRYPTO_ETF_FLOW_CACHE_SECONDS=900

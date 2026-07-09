@@ -19,9 +19,7 @@ MAX_FEED_ITEMS = 100
 USER_AGENT = "Mozilla/5.0"
 
 _POST_RE = re.compile(r'data-post="([^"]+)"')
-_TEXT_RE = re.compile(
-    r'class="tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>', re.S
-)
+_TEXT_RE = re.compile(r'class="tgme_widget_message_text[^"]*"[^>]*>(.*?)</div>', re.S)
 _TIME_RE = re.compile(r'<time datetime="([^"]+)"')
 _TITLE_RE = re.compile(r'<meta property="og:title" content="([^"]*)"')
 _TAG_RE = re.compile(r"<[^>]+>")
@@ -75,9 +73,7 @@ class NewsService:
             return new_items
 
     def feed_payload(self) -> dict[str, object]:
-        items = sorted(
-            self._items.values(), key=lambda item: item["timestamp"], reverse=True
-        )
+        items = sorted(self._items.values(), key=lambda item: item["timestamp"], reverse=True)
         return {
             "items": [
                 {**item, "channel_title": self._titles.get(item["channel"], item["channel"])}
@@ -90,16 +86,14 @@ class NewsService:
     def _trim(self) -> None:
         if len(self._items) <= MAX_FEED_ITEMS:
             return
-        newest = sorted(
-            self._items.values(), key=lambda item: item["timestamp"], reverse=True
-        )[:MAX_FEED_ITEMS]
+        newest = sorted(self._items.values(), key=lambda item: item["timestamp"], reverse=True)[
+            :MAX_FEED_ITEMS
+        ]
         self._items = {item["id"]: item for item in newest}
 
     async def _fetch_channel(self, channel: str) -> str:
         try:
-            async with httpx.AsyncClient(
-                timeout=FETCH_TIMEOUT, follow_redirects=True
-            ) as client:
+            async with httpx.AsyncClient(timeout=FETCH_TIMEOUT, follow_redirects=True) as client:
                 response = await client.get(
                     PREVIEW_URL.format(channel=channel),
                     headers={"User-Agent": USER_AGENT},

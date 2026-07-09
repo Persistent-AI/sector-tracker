@@ -72,9 +72,7 @@ def test_dxy_keeps_normal_tone_and_none_change() -> None:
 
 
 def test_non_positive_quotes_are_skipped() -> None:
-    items = macro_payload(
-        [_quote("^VIX", 0.0), _quote("^TNX", -1.0), _quote("DX-Y.NYB", 104.2)]
-    )
+    items = macro_payload([_quote("^VIX", 0.0), _quote("^TNX", -1.0), _quote("DX-Y.NYB", 104.2)])
 
     assert [item["symbol"] for item in items] == ["DX-Y.NYB"]
 

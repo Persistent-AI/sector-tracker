@@ -29,4 +29,3 @@ def test_quote_handles_missing_prev_close() -> None:
 
     assert quote.change_abs is None
     assert quote.change_pct is None
-

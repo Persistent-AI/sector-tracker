@@ -11,15 +11,12 @@ CHANNEL = "marketfeed"
 PREVIEW_PREFIX = news_module.PREVIEW_URL.format(channel="")
 
 
-def post_block(
-    post_id: str, text_html: str | None, time_attr: str | None
-) -> str:
+def post_block(post_id: str, text_html: str | None, time_attr: str | None) -> str:
     """One t.me/s message block, mirroring the real preview markup shape."""
     parts = [f'<div class="tgme_widget_message" data-post="{post_id}">']
     if text_html is not None:
         parts.append(
-            '<div class="tgme_widget_message_text js-message_text" dir="auto">'
-            f"{text_html}</div>"
+            f'<div class="tgme_widget_message_text js-message_text" dir="auto">{text_html}</div>'
         )
     if time_attr is not None:
         parts.append(
@@ -65,9 +62,7 @@ class FakeHTTP:
             async def __aexit__(self, *exc: Any) -> bool:
                 return False
 
-            async def get(
-                self, url: str, headers: dict[str, str] | None = None
-            ) -> FakeResponse:
+            async def get(self, url: str, headers: dict[str, str] | None = None) -> FakeResponse:
                 channel = url.removeprefix(PREVIEW_PREFIX)
                 fake.requests.append(channel)
                 result = fake.routes[channel]
@@ -163,9 +158,7 @@ def test_parser_skips_incomplete_posts(
         ("already UTC round-trips", "2026-07-07T08:09:55+00:00", "2026-07-07T08:09:55+00:00"),
     ],
 )
-def test_parser_normalizes_timestamps_to_utc(
-    name: str, time_attr: str, expected: str
-) -> None:
+def test_parser_normalizes_timestamps_to_utc(name: str, time_attr: str, expected: str) -> None:
     html_page = page(post_block(f"{CHANNEL}/1", "Text", time_attr))
 
     items = parse_channel_page(CHANNEL, html_page)
@@ -298,9 +291,7 @@ async def test_feed_trims_to_100_newest_items(
     def stamp(i: int) -> str:
         return f"2026-07-07T{i // 60:02d}:{i % 60:02d}:00+00:00"
 
-    blocks = [
-        post_block(f"alpha/{i}", f"Post {i}", stamp(i)) for i in range(1, 121)
-    ]
+    blocks = [post_block(f"alpha/{i}", f"Post {i}", stamp(i)) for i in range(1, 121)]
     fake = FakeHTTP({"alpha": page(*blocks)})
     fake.install(monkeypatch)
     service = NewsService(["alpha"], cache_seconds=1000)

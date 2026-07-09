@@ -194,19 +194,11 @@ def _chart_result(quote_indicators: dict[str, Any]) -> dict[str, Any]:
 @pytest.mark.parametrize(
     ("indicators", "expected"),
     [
-        pytest.param(
-            {"open": [None, 0, 101.5, 102.0]}, 101.5, id="skips-leading-null-and-zero"
-        ),
+        pytest.param({"open": [None, 0, 101.5, 102.0]}, 101.5, id="skips-leading-null-and-zero"),
         pytest.param({"open": [-3.0, 101.5]}, 101.5, id="skips-negative"),
-        pytest.param(
-            {"open": [float("nan"), float("inf"), 42.5]}, 42.5, id="skips-non-finite"
-        ),
-        pytest.param(
-            {"open": [100.0], "close": [105.0]}, 100.0, id="open-preferred-over-close"
-        ),
-        pytest.param(
-            {"close": [None, 99.5, 100.0]}, 99.5, id="missing-open-falls-back-to-close"
-        ),
+        pytest.param({"open": [float("nan"), float("inf"), 42.5]}, 42.5, id="skips-non-finite"),
+        pytest.param({"open": [100.0], "close": [105.0]}, 100.0, id="open-preferred-over-close"),
+        pytest.param({"close": [None, 99.5, 100.0]}, 99.5, id="missing-open-falls-back-to-close"),
         pytest.param(
             {"open": [None, None], "close": [None, 50.0]},
             50.0,
@@ -224,9 +216,7 @@ def _chart_result(quote_indicators: dict[str, Any]) -> dict[str, Any]:
         ),
     ],
 )
-def test_session_open_extraction(
-    indicators: dict[str, Any], expected: float
-) -> None:
+def test_session_open_extraction(indicators: dict[str, Any], expected: float) -> None:
     assert _session_open(_chart_result(indicators)) == expected
 
 
@@ -238,9 +228,7 @@ def test_session_open_extraction(
         pytest.param({"indicators": {}}, id="no-quote-key"),
         pytest.param({"indicators": {"quote": []}}, id="empty-quote-list"),
         pytest.param({"indicators": {"quote": [None]}}, id="quote-entry-not-a-dict"),
-        pytest.param(
-            _chart_result({"open": [None, 0], "close": [None]}), id="all-arrays-invalid"
-        ),
+        pytest.param(_chart_result({"open": [None, 0], "close": [None]}), id="all-arrays-invalid"),
     ],
 )
 def test_session_open_malformed_returns_none(result: dict[str, Any]) -> None:

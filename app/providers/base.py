@@ -15,4 +15,3 @@ class QuoteProvider(ABC):
     @abstractmethod
     async def get_history(self, asset: AssetConfig, *, interval: str, range_: str) -> list[Bar]:
         raise NotImplementedError
-

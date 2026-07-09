@@ -82,9 +82,7 @@ class DailyBoardService:
         as_of = str(overview.get("as_of", ""))
         snapshot_date = as_of[:10] or datetime.now(UTC).date().isoformat()
         try:
-            db.save_board_snapshot(
-                self.database_path, snapshot_date, _snapshot_payload(overview)
-            )
+            db.save_board_snapshot(self.database_path, snapshot_date, _snapshot_payload(overview))
         except Exception:
             pass
 
@@ -284,10 +282,7 @@ def _display_bars(quote: Quote | None, bars: list[Bar]) -> list[Bar]:
     if divisor <= 10:
         return bars
     threshold = quote.display_last * 10
-    return [
-        _display_bar(bar, divisor, threshold)
-        for bar in bars
-    ]
+    return [_display_bar(bar, divisor, threshold) for bar in bars]
 
 
 def _display_bar(bar: Bar, divisor: float, threshold: float) -> Bar:
@@ -352,9 +347,7 @@ def _theme_metrics(
     themes: list[dict[str, object]] = []
     for group in groups:
         members = [
-            asset_metrics[asset.symbol]
-            for asset in group.assets
-            if asset.symbol in asset_metrics
+            asset_metrics[asset.symbol] for asset in group.assets if asset.symbol in asset_metrics
         ]
         changes_1d = _numbers(member["change_1d"] for member in members)
         changes_5d = _numbers(member["change_5d"] for member in members)

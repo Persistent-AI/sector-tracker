@@ -276,9 +276,7 @@ async def validate_symbol_exists(asset: AssetConfig) -> None:
         raise HTTPException(status_code=422, detail="symbol_not_found")
 
 
-@app.delete(
-    "/api/groups/{group_name}/assets/{symbol}", dependencies=[Depends(require_edit_token)]
-)
+@app.delete("/api/groups/{group_name}/assets/{symbol}", dependencies=[Depends(require_edit_token)])
 async def delete_asset(group_name: str, symbol: str) -> dict[str, object]:
     async with app.state.watchlist_lock:
         groups_current = load_watchlists(app.state.settings.watchlist_path)
@@ -412,9 +410,7 @@ def yahoo_status() -> dict[str, object]:
 @app.get("/api/snapshots")
 async def snapshots(days: int = Query(default=30, ge=1, le=365)) -> dict[str, object]:
     """Persisted daily-board history: regime, breadth, and theme scores by date."""
-    rows = await asyncio.to_thread(
-        db.load_board_snapshots, app.state.settings.database_path, days
-    )
+    rows = await asyncio.to_thread(db.load_board_snapshots, app.state.settings.database_path, days)
     return {"snapshots": rows}
 
 
@@ -451,9 +447,7 @@ async def quotes_ws(websocket: WebSocket) -> None:
     manager: ConnectionManager = app.state.connection_manager
     await manager.connect(websocket)
     try:
-        grouped = await app.state.quote_service.get_board_quotes(
-            with_macro_group(app.state.groups)
-        )
+        grouped = await app.state.quote_service.get_board_quotes(with_macro_group(app.state.groups))
         await websocket.send_json({"type": "quotes", "data": board_payload(grouped)})
         while True:
             await websocket.receive_text()

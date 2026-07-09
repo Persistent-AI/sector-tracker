@@ -74,9 +74,7 @@ def _profile_from_yahoo_info(asset: AssetConfig, info: dict[str, Any]) -> dict[s
         "website": _text(info, "website"),
         "description": _text(info, "longBusinessSummary"),
         "metrics": (
-            _etf_metrics(info, money_divisor)
-            if is_etf
-            else _equity_metrics(info, money_divisor)
+            _etf_metrics(info, money_divisor) if is_etf else _equity_metrics(info, money_divisor)
         ),
     }
 

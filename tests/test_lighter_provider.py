@@ -123,9 +123,7 @@ def seeded_provider(details: dict[str, dict[str, Any]]) -> LighterProvider:
 async def test_get_quotes_maps_perp_detail_and_lighter_funding(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    fake = FakeHTTP(
-        {"/orderBookDetails": details_payload(), "/funding-rates": funding_payload()}
-    )
+    fake = FakeHTTP({"/orderBookDetails": details_payload(), "/funding-rates": funding_payload()})
     fake.install(monkeypatch)
     provider = LighterProvider()
 
@@ -151,9 +149,7 @@ async def test_get_quotes_maps_perp_detail_and_lighter_funding(
 async def test_non_perp_assets_get_no_funding_and_skip_funding_fetch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    fake = FakeHTTP(
-        {"/orderBookDetails": details_payload(), "/funding-rates": funding_payload()}
-    )
+    fake = FakeHTTP({"/orderBookDetails": details_payload(), "/funding-rates": funding_payload()})
     fake.install(monkeypatch)
     provider = LighterProvider()
 
@@ -223,9 +219,7 @@ async def test_details_cached_within_ttl(monkeypatch: pytest.MonkeyPatch) -> Non
 async def test_funding_cache_outlives_details_refresh(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    fake = FakeHTTP(
-        {"/orderBookDetails": details_payload(), "/funding-rates": funding_payload()}
-    )
+    fake = FakeHTTP({"/orderBookDetails": details_payload(), "/funding-rates": funding_payload()})
     fake.install(monkeypatch)
     provider = LighterProvider()
 
@@ -274,9 +268,7 @@ async def test_get_history_builds_bars_and_skips_malformed_candles(
     }
     fake = FakeHTTP({"/candles": candles})
     fake.install(monkeypatch)
-    provider = seeded_provider(
-        {"BTC": {"symbol": "BTC", "market_id": 1, "status": "active"}}
-    )
+    provider = seeded_provider({"BTC": {"symbol": "BTC", "market_id": 1, "status": "active"}})
 
     bars = await provider.get_history(BTC_PERP, interval="1h", range_="1d")
 
@@ -314,9 +306,7 @@ async def test_get_history_maps_interval_to_supported_resolution(
 ) -> None:
     fake = FakeHTTP({"/candles": {"c": []}})
     fake.install(monkeypatch)
-    provider = seeded_provider(
-        {"BTC": {"symbol": "BTC", "market_id": 1, "status": "active"}}
-    )
+    provider = seeded_provider({"BTC": {"symbol": "BTC", "market_id": 1, "status": "active"}})
 
     await provider.get_history(BTC_PERP, interval=interval, range_="1d")
 
@@ -330,9 +320,7 @@ async def test_get_history_unknown_symbol_returns_empty_without_fetch(
 ) -> None:
     fake = FakeHTTP({})
     fake.install(monkeypatch)
-    provider = seeded_provider(
-        {"BTC": {"symbol": "BTC", "market_id": 1, "status": "active"}}
-    )
+    provider = seeded_provider({"BTC": {"symbol": "BTC", "market_id": 1, "status": "active"}})
 
     bars = await provider.get_history(
         AssetConfig(symbol="NOSUCH", type="equity", source="lighter"),
@@ -352,12 +340,27 @@ async def test_cached_detail_helpers_answer_without_http(
     fake.install(monkeypatch)
     provider = seeded_provider(
         {
-            "BTC": {"symbol": "BTC", "market_id": 1, "status": "active",
-                    "strategy_index": 2, "last_trade_price": 62000.0},
-            "SPY": {"symbol": "SPY", "market_id": 128, "status": "active",
-                    "strategy_index": 5, "last_trade_price": 744.5},
-            "HALTED": {"symbol": "HALTED", "market_id": 8, "status": "active",
-                       "strategy_index": 5, "last_trade_price": 0.0},
+            "BTC": {
+                "symbol": "BTC",
+                "market_id": 1,
+                "status": "active",
+                "strategy_index": 2,
+                "last_trade_price": 62000.0,
+            },
+            "SPY": {
+                "symbol": "SPY",
+                "market_id": 128,
+                "status": "active",
+                "strategy_index": 5,
+                "last_trade_price": 744.5,
+            },
+            "HALTED": {
+                "symbol": "HALTED",
+                "market_id": 8,
+                "status": "active",
+                "strategy_index": 5,
+                "last_trade_price": 0.0,
+            },
         }
     )
 

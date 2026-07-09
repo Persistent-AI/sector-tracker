@@ -41,9 +41,7 @@ def macro_payload(quotes: list[Quote]) -> list[dict[str, object]]:
                 "unit": "yield" if is_yield else "index",
                 "last": round(quote.last / divisor, 4),
                 "change_abs": (
-                    round(quote.change_abs / divisor, 4)
-                    if quote.change_abs is not None
-                    else None
+                    round(quote.change_abs / divisor, 4) if quote.change_abs is not None else None
                 ),
                 "change_pct": quote.change_pct,
                 "invert_tone": quote.symbol in _INVERTED_TONE_SYMBOLS,

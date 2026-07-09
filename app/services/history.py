@@ -122,10 +122,7 @@ class HistoryService:
         for symbol in batch:
             self._heal_attempts[symbol] = now_mono
         await asyncio.gather(
-            *(
-                self.get_history(groups, symbol, interval="1d", range_="1y")
-                for symbol in batch
-            ),
+            *(self.get_history(groups, symbol, interval="1d", range_="1y") for symbol in batch),
             return_exceptions=True,
         )
 

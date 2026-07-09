@@ -279,9 +279,7 @@ async def test_perp_quotes_refresh_categories_for_the_tape(
                 ]
             },
             "/tokenlist": {
-                "tokens": [
-                    {"symbol": "BTC", "asset_type": "CRYPTO", "categories": ["LAYER_1"]}
-                ]
+                "tokens": [{"symbol": "BTC", "asset_type": "CRYPTO", "categories": ["LAYER_1"]}]
             },
         }
     )

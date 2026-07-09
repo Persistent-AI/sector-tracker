@@ -137,11 +137,7 @@ def parse_pipe_table(markdown: str) -> list[dict[str, object]]:
 
 def _parse_pipe_date_header_rows(table_rows: list[list[str]]) -> list[dict[str, object]]:
     header_row = next(
-        (
-            row
-            for row in table_rows
-            if row and row[0].casefold() == "date" and "Total" in row
-        ),
+        (row for row in table_rows if row and row[0].casefold() == "date" and "Total" in row),
         None,
     )
     if header_row is None:
@@ -279,9 +275,7 @@ def _parse_token_date_rows(
             continue
         flow_start = index + 1
         total_index = flow_start + len(tickers)
-        flow_values = [
-            _parse_flow_millions(value) for value in tokens[flow_start:total_index]
-        ]
+        flow_values = [_parse_flow_millions(value) for value in tokens[flow_start:total_index]]
         total = _parse_flow_millions(tokens[total_index])
         if total is not None:
             rows.append(_flow_row(date, tickers, flow_values, total))

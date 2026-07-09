@@ -52,9 +52,7 @@ class YahooProvider(QuoteProvider):
             return []
         unique_assets = list({asset.symbol: asset for asset in assets}.values())
         quotes_by_symbol = self._get_spark_quotes_sync(unique_assets)
-        missing_assets = [
-            asset for asset in unique_assets if asset.symbol not in quotes_by_symbol
-        ]
+        missing_assets = [asset for asset in unique_assets if asset.symbol not in quotes_by_symbol]
         # Spark and chart are rate-limited independently; when spark is banned
         # (shared serverless egress IPs), recover every symbol through the
         # chart endpoint in parallel instead of capping at 8 sequential calls.
@@ -95,8 +93,7 @@ class YahooProvider(QuoteProvider):
         try:
             payload = _get_json_with_retry(
                 tuple(
-                    url.format(symbol=url_quote(asset.symbol, safe=""))
-                    for url in YAHOO_CHART_URLS
+                    url.format(symbol=url_quote(asset.symbol, safe="")) for url in YAHOO_CHART_URLS
                 ),
                 params={"interval": "1m", "range": "1d"},
             )
@@ -173,10 +170,7 @@ def _fetch_chart_bars(asset: AssetConfig, interval: str, yahoo_range: str) -> li
     }
     try:
         payload = _get_json_with_retry(
-            tuple(
-                url.format(symbol=url_quote(asset.symbol, safe=""))
-                for url in YAHOO_CHART_URLS
-            ),
+            tuple(url.format(symbol=url_quote(asset.symbol, safe="")) for url in YAHOO_CHART_URLS),
             params=params,
         )
     except Exception:
@@ -261,9 +255,7 @@ def _asset_listing_currency(asset: AssetConfig) -> str | None:
 
 def _fx_rates(fx_bars: list[Bar]) -> list[tuple[datetime, float]]:
     return [
-        (bar.timestamp, bar.close)
-        for bar in fx_bars
-        if bar.close > 0 and math.isfinite(bar.close)
+        (bar.timestamp, bar.close) for bar in fx_bars if bar.close > 0 and math.isfinite(bar.close)
     ]
 
 

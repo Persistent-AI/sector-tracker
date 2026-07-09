@@ -59,9 +59,7 @@ class StooqProvider(QuoteProvider):
         bars: list[Bar] = []
         for row in csv.DictReader(StringIO(response.text)):
             try:
-                timestamp = datetime.strptime(str(row["Date"]), "%Y-%m-%d").replace(
-                    tzinfo=UTC
-                )
+                timestamp = datetime.strptime(str(row["Date"]), "%Y-%m-%d").replace(tzinfo=UTC)
             except (KeyError, ValueError):
                 continue
             open_ = _number(row.get("Open"))

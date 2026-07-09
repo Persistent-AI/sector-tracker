@@ -21,9 +21,7 @@ def test_snapshot_upsert_replaces_payload_for_same_date(tmp_path: Path) -> None:
     db.save_board_snapshot(database, "2026-07-01", {"score": 40})
     db.save_board_snapshot(database, "2026-07-01", {"score": 82})
 
-    assert db.load_board_snapshots(database, limit=10) == [
-        {"score": 82, "date": "2026-07-01"}
-    ]
+    assert db.load_board_snapshots(database, limit=10) == [{"score": 82, "date": "2026-07-01"}]
 
 
 def test_snapshot_limit_keeps_most_recent_dates_oldest_first(tmp_path: Path) -> None:
@@ -46,14 +44,12 @@ def test_snapshot_load_skips_malformed_rows(tmp_path: Path) -> None:
     conn = sqlite3.connect(database)
     with conn:
         conn.execute(
-            "INSERT INTO board_snapshots (snapshot_date, created_at, payload)"
-            " VALUES (?, ?, ?)",
+            "INSERT INTO board_snapshots (snapshot_date, created_at, payload) VALUES (?, ?, ?)",
             ("2026-07-02", "2026-07-02T00:00:00+00:00", "{not json"),
         )
         # Valid JSON but not an object: also skipped.
         conn.execute(
-            "INSERT INTO board_snapshots (snapshot_date, created_at, payload)"
-            " VALUES (?, ?, ?)",
+            "INSERT INTO board_snapshots (snapshot_date, created_at, payload) VALUES (?, ?, ?)",
             ("2026-07-03", "2026-07-03T00:00:00+00:00", json.dumps([1, 2])),
         )
     conn.close()

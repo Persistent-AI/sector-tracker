@@ -31,6 +31,18 @@ class Settings(BaseSettings):
     news_telegram_channels: str = "marketfeed,RetardFrens,tradehaven,AGGRNEWSWIRE"
     news_poll_seconds: int = Field(default=15, ge=5)
     enable_background_tasks: bool = True
+    # Browser origins allowed to call the API cross-origin, comma-separated
+    # ("*" for any). Lets an external frontend embed the board. Mutating
+    # endpoints stay protected by edit_token regardless.
+    cors_allow_origins: str = "*"
+
+    @property
+    def cors_origins(self) -> list[str]:
+        return [
+            origin.strip()
+            for origin in self.cors_allow_origins.split(",")
+            if origin.strip()
+        ]
 
     @property
     def news_channels(self) -> list[str]:

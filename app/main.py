@@ -19,6 +19,7 @@ from fastapi import (
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
+from starlette.middleware.cors import CORSMiddleware
 from starlette.middleware.gzip import GZipMiddleware
 
 from app import db
@@ -118,6 +119,17 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(title="Cross-Asset Board", lifespan=lifespan)
 # Vercel's edge gzips responses; this covers local/VPS deployments too.
 app.add_middleware(GZipMiddleware, minimum_size=1024)
+# Middleware must be registered before startup, so read settings here rather
+# than reusing the lifespan instance. X-Edit-Token rides in allow_headers;
+# no cookies are used, so credentials stay disabled (required for "*").
+_cors_origins = Settings().cors_origins
+if _cors_origins:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_cors_origins,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 
 class CachedStaticFiles(StaticFiles):
